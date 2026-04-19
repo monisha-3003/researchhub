@@ -20,9 +20,15 @@ app = Flask(__name__)
 CORS(app)
 
 # ── MySQL Config ──────────────────────────────────────────────────────────────
+import os
 app.config['SQLALCHEMY_DATABASE_URI'] = (
-    'mysql+mysqlconnector://root:root@localhost/researchhub'
+    f"mysql+mysqlconnector://{os.environ.get('MYSQL_USER')}:"
+    f"{os.environ.get('MYSQL_PASSWORD')}@"
+    f"{os.environ.get('MYSQL_HOST')}:"
+    f"{os.environ.get('MYSQL_PORT', '3306')}/"
+    f"{os.environ.get('MYSQL_DATABASE')}"
 )
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'researchhub-secret-key-change-in-production'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
