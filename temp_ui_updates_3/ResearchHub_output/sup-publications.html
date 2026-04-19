@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ResearchHub — Publications</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/toast.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .filter-bar { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; }
+    .filter-pill { padding:0.42rem 1.1rem; border-radius:20px; font-size:0.82rem; font-weight:500; border:1px solid var(--glass-border); background:transparent; color:var(--text-muted); cursor:pointer; transition:all 0.2s; }
+    .filter-pill.active { background:#fff; color:#000; border-color:#fff; font-weight:700; }
+    .filter-pill:not(.active):hover { border-color:var(--primary); color:var(--primary); }
+    .scholars-dropdown {
+      margin-left:auto; padding:0.4rem 0.9rem; border-radius:10px;
+      background:transparent; border:1px solid var(--glass-border); color:var(--text-muted);
+      font-size:0.82rem; font-family:inherit; cursor:pointer;
+    }
+    .scholars-dropdown option { background:#1a0a2e; }
+
+    /* Pub card */
+    .pub-card {
+      background:var(--glass); border:1px solid var(--glass-border);
+      border-radius:14px; padding:1.4rem; margin-bottom:1rem; transition:border-color 0.2s;
+    }
+    .pub-card:hover { border-color:rgba(255,255,255,0.18); }
+    .pc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:0.7rem; }
+    .pc-type { font-size:0.72rem; color:var(--primary); font-weight:600; margin-bottom:0.3rem; }
+    .pc-title { font-size:0.95rem; font-weight:700; color:#fff; line-height:1.4; }
+    .pc-status { font-size:0.72rem; font-weight:700; padding:3px 10px; border-radius:10px; white-space:nowrap; flex-shrink:0; }
+    .ps-published { background:rgba(34,197,94,0.12); color:#22c55e; }
+    .ps-review    { background:rgba(245,158,11,0.12); color:#f59e0b; }
+    .pc-meta { display:flex; gap:1.2rem; font-size:0.78rem; color:var(--text-muted); flex-wrap:wrap; }
+    .pc-meta span strong { color:rgba(255,255,255,0.75); font-weight:600; }
+
+    .stat-sb2 { display:inline-block; margin-top:0.4rem; padding:2px 10px; border-radius:20px; font-size:0.72rem; font-weight:600; }
+    .sb-green { background:rgba(34,197,94,0.12); color:#22c55e; }
+    .sb-yellow{ background:rgba(245,158,11,0.12); color:#f59e0b; }
+    .sb-blue  { background:rgba(99,102,241,0.12); color:#a5b4fc; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div id="sidebar-container"></div>
+  <main class="main-wrapper">
+    <div class="content-body animate-in">
+      <div class="page-header">
+      <h1>Publications</h1>
+      <p class="page-sub">All publications from you and your scholars</p>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
+      <div class="stat-card">
+        <div class="stat-value" style="font-size:2rem">14</div>
+        <div class="stat-label">Total publications</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="font-size:2rem;color:#22c55e">11</div>
+        <div class="stat-label">Published</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="font-size:2rem;color:#f59e0b">3</div>
+        <div class="stat-label">Under review</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="font-size:2rem;color:#a5b4fc">87</div>
+        <div class="stat-label">Total citations</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <button class="filter-pill active" onclick="filterPubs('all',this)">All</button>
+      <button class="filter-pill" onclick="filterPubs('published',this)">Published</button>
+      <button class="filter-pill" onclick="filterPubs('review',this)">Under review</button>
+      <button class="filter-pill" onclick="filterPubs('mine',this)">Mine only</button>
+      <select class="scholars-dropdown" onchange="filterByScholar(this.value)">
+        <option value="all">All scholars</option>
+        <option value="PS">Priya Sharma</option>
+        <option value="AM">Arjun Mehta</option>
+        <option value="SR">Sneha Rao</option>
+      </select>
+    </div>
+
+    <!-- List -->
+    <div id="pubList"></div>
+    </div>
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const user = requireAuth('faculty');
+
+  const PUBS = [
+    { scholar:'PS', initials:'Priya Sharma',   type:'EMNLP 2025 · Conference paper', title:'Transformer-based cross-lingual NLP for low-resource Indian languages', journal:'EMNLP',  year:2025, citations:12, status:'published' },
+    { scholar:'AM', initials:'Arjun Mehta',    type:'IEEE TKDE · Journal paper',     title:'Scalable graph-based data deduplication in distributed systems',         journal:'IEEE',   year:2024, citations:8,  status:'published' },
+    { scholar:'SR', initials:'Sneha Rao',      type:'SIGCOMM 2024 · Conference',     title:'Adaptive SDN routing for real-time IoT traffic management',               journal:'SIGCOMM',year:2024, citations:5,  status:'published' },
+    { scholar:'PS', initials:'Priya Sharma',   type:'ACL 2026 · Under review',       title:'Instruction tuning for multilingual LLMs: A comparative study',           journal:'ACL',    year:2026, citations:0,  status:'review' },
+    { scholar:'AM', initials:'Arjun Mehta',    type:'VLDB 2026 · Under review',      title:'Learned indexes for heterogeneous workloads in cloud databases',           journal:'VLDB',   year:2026, citations:0,  status:'review' },
+    { scholar:'KN', initials:'Kavya Nair',     type:'CVPR 2025 · Conference',        title:'Few-shot object detection with vision-language alignment',                 journal:'CVPR',   year:2025, citations:21, status:'published' },
+  ];
+
+  let currentFilter = 'all';
+  let scholarFilter = 'all';
+
+  if (user) { renderSidebar('sup-publications.html'); loadPendingBadge(); renderPubs(); }
+
+  function filterPubs(f, btn) {
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = f;
+    renderPubs();
+  }
+
+  function filterByScholar(val) { scholarFilter = val; renderPubs(); }
+
+  function renderPubs() {
+    let data = PUBS;
+    if (currentFilter === 'mine') { document.getElementById('pubList').innerHTML = `<div class="empty-state">No personal publications added.</div>`; return; }
+    if (currentFilter !== 'all') data = data.filter(p => p.status === currentFilter);
+    if (scholarFilter !== 'all') data = data.filter(p => p.scholar === scholarFilter);
+
+    document.getElementById('pubList').innerHTML = data.length ? data.map(p => `
+      <div class="pub-card">
+        <div class="pc-top">
+          <div>
+            <div class="pc-type">${p.type}</div>
+            <div class="pc-title">${p.title}</div>
+          </div>
+          <span class="pc-status ${p.status === 'published' ? 'ps-published' : 'ps-review'}">${p.status === 'published' ? 'Published' : 'Under review'}</span>
+        </div>
+        <div class="pc-meta">
+          <span>Scholar: <strong>${p.initials}</strong></span>
+          <span>Journal: <strong>${p.journal}</strong></span>
+          <span>Year: <strong>${p.year}</strong></span>
+          ${p.citations ? `<span>Citations: <strong>${p.citations}</strong></span>` : ''}
+        </div>
+      </div>`).join('')
+    : `<div class="empty-state">No publications found.</div>`;
+  }
+</script>
+</body>
+</html>

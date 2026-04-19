@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ResearchHub — Stipend &amp; Fellowship</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/toast.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* JRF Banner */
+    .jrf-banner {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      border-radius: 16px;
+      padding: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+    }
+    .jrf-title  { font-size: 1.3rem; font-weight: 700; color: #fff; margin-bottom: 0.3rem; }
+    .jrf-sub    { font-size: 0.82rem; color: rgba(255,255,255,0.7); margin-bottom: 0.85rem; }
+    .jrf-status {
+      display: inline-block; padding: 4px 14px; border-radius: 20px;
+      background: rgba(255,255,255,0.15); color: #fff; font-size: 0.78rem; font-weight: 600;
+    }
+    .jrf-amount       { text-align: right; }
+    .jrf-amount-val   { font-size: 2.5rem; font-weight: 700; color: #fff; line-height: 1; }
+    .jrf-amount-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 0.3rem; }
+
+    /* Summary stats */
+    .stipend-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.25rem; margin-bottom: 1.5rem; }
+    .stipend-card {
+      background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: 14px; padding: 1.4rem;
+    }
+    .sc-val { font-size: 1.9rem; font-weight: 700; color: #fff; margin-bottom: 0.3rem; }
+    .sc-label { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .sc-badge {
+      display: inline-block; padding: 2px 10px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 600;
+    }
+
+    /* Bottom layout */
+    .stipend-bottom { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.5rem; }
+
+    /* Payment table */
+    .pay-table { width: 100%; border-collapse: collapse; }
+    .pay-table th { text-align: left; color: var(--text-muted); padding: 0.6rem 0.8rem; font-size: 0.78rem; font-weight: 600; border-bottom: 1px solid var(--glass-border); }
+    .pay-table td { padding: 0.75rem 0.8rem; font-size: 0.875rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .pay-amount { color: #22c55e; font-weight: 700; }
+    .pay-badge { padding: 2px 8px; border-radius: 8px; font-size: 0.72rem; font-weight: 600; background: rgba(34,197,94,0.12); color: #22c55e; }
+
+    /* Timeline */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .tl-item { display: flex; gap: 1rem; padding-bottom: 1.2rem; position: relative; }
+    .tl-item:last-child { padding-bottom: 0; }
+    .tl-left { display: flex; flex-direction: column; align-items: center; }
+    .tl-dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+      background: var(--primary); border: 2px solid var(--bg); z-index: 1;
+    }
+    .tl-dot.pending { background: rgba(245,158,11,0.5); }
+    .tl-line { width: 2px; flex: 1; background: var(--glass-border); margin-top: 2px; }
+    .tl-item:last-child .tl-line { display: none; }
+    .tl-title  { font-size: 0.85rem; font-weight: 600; color: #fff; }
+    .tl-sub    { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div id="sidebar-container"></div>
+
+  <main class="main-wrapper">
+    <div class="content-body animate-in">
+      <div class="page-header">
+      <h1>Stipend &amp; fellowship</h1>
+      <p class="page-sub">Track your payments, fellowship status and renewal timeline</p>
+    </div>
+
+    <!-- JRF Banner -->
+    <div class="jrf-banner">
+      <div>
+        <div class="jrf-title">Junior Research Fellowship (JRF)</div>
+        <div class="jrf-sub">University Grants Commission · Awarded Mar 2023</div>
+        <span class="jrf-status">Active · Valid until Mar 2028</span>
+      </div>
+      <div class="jrf-amount">
+        <div class="jrf-amount-val">₹37,000</div>
+        <div class="jrf-amount-label">per month</div>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="stipend-grid">
+      <div class="stipend-card">
+        <div class="sc-val">₹8.88L</div>
+        <div class="sc-label">Total received to date</div>
+        <span class="sc-badge" style="background:rgba(34,197,94,0.12);color:#22c55e">24 payments</span>
+      </div>
+      <div class="stipend-card">
+        <div class="sc-val">Mar 2026</div>
+        <div class="sc-label">Last payment</div>
+        <span class="sc-badge" style="background:rgba(34,197,94,0.12);color:#22c55e">On time</span>
+      </div>
+      <div class="stipend-card">
+        <div class="sc-val">24 mo.</div>
+        <div class="sc-label">Remaining tenure</div>
+        <span class="sc-badge" style="background:rgba(245,158,11,0.12);color:#f59e0b">Renewal due Mar 2027</span>
+      </div>
+    </div>
+
+    <!-- Bottom: Payment history + Timeline -->
+    <div class="stipend-bottom">
+      <div class="panel">
+        <h3 style="color:#fff;margin-bottom:1.2rem;font-size:1rem">Payment history</h3>
+        <table class="pay-table">
+          <thead>
+            <tr><th>Month</th><th>Amount</th><th>Date credited</th><th>Status</th></tr>
+          </thead>
+          <tbody id="payTableBody">
+            <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:2rem;">Fetching your stipend history...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <h3 style="color:#fff;margin-bottom:1.4rem;font-size:1rem">Renewal timeline</h3>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
+            <div><div class="tl-title">JRF awarded</div><div class="tl-sub">March 2023 · ₹31,000/mo</div></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
+            <div><div class="tl-title">Upgraded to SRF rate</div><div class="tl-sub">March 2025 · ₹37,000/mo</div></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot pending"></div><div class="tl-line"></div></div>
+            <div><div class="tl-title">Annual renewal due</div><div class="tl-sub">March 2027 · Submit progress report</div></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot pending"></div></div>
+            <div><div class="tl-title">Fellowship end date</div><div class="tl-sub">March 2028 · 5 year limit</div></div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const user = requireAuth('scholar');
+  if (user) { 
+      renderSidebar('stipend.html'); 
+      loadStipends();
+  }
+
+  async function loadStipends() {
+      try {
+          const scholarId = user.scholar_id || user.id;
+          const records = await apiGet(`/stipend/${scholarId}`);
+          const tbody = document.getElementById('payTableBody');
+          
+          if (!records || records.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">No stipend records found.</td></tr>';
+              return;
+          }
+
+          tbody.innerHTML = records.map(r => {
+              const statusColor = r.status.toLowerCase() === 'paid' ? '#22c55e' : '#f59e0b';
+              const statusBg = r.status.toLowerCase() === 'paid' ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)';
+              return `<tr>
+                  <td>${r.month} ${r.year}</td>
+                  <td class="pay-amount">₹${r.amount.toLocaleString()}</td>
+                  <td>${r.paid_on ? new Date(r.paid_on).toLocaleDateString('en-IN', {month:'short', day:'numeric', year:'numeric'}) : 'Pending'}</td>
+                  <td><span class="pay-badge" style="background:${statusBg};color:${statusColor}">${r.status.toUpperCase()}</span></td>
+              </tr>`;
+          }).join('');
+
+          // Update summary values: Total received, payments count, last payment
+          const paidRecords = records.filter(r => r.status.toLowerCase() === 'paid');
+          const totalPaid = paidRecords.reduce((sum, r) => sum + r.amount, 0);
+          
+          if(paidRecords.length > 0) {
+              document.querySelector('.sc-val').textContent = '₹' + (totalPaid / 100000).toFixed(2) + 'L';
+              document.querySelector('.sc-badge').textContent = paidRecords.length + ' payments';
+              
+              const lastPaid = paidRecords[0]; // because it's sorted desc
+              document.querySelectorAll('.sc-val')[1].textContent = `${lastPaid.month} ${lastPaid.year}`;
+          }
+
+      } catch (e) {
+          document.getElementById('payTableBody').innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;">Failed to load stipend history.</td></tr>';
+      }
+  }
+</script>
+</body>
+</html>

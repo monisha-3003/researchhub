@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Attendance — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Stats */
+        .att-stat { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.25rem 1.5rem; text-align:center; transition: transform 0.2s, border-color 0.2s; }
+        .att-stat:hover { transform: translateY(-2px); border-color: var(--primary); }
+        .att-stat-val { font-size:2rem; font-weight:800; line-height:1; }
+        .att-stat-lbl { font-size:0.78rem; color:var(--text-muted); margin-top:0.3rem; font-weight:500; }
+
+        /* Calendar */
+        .cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; }
+        .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:0.4rem; }
+        .cal-day-hdr { text-align:center; font-size:0.72rem; color:var(--text-muted); font-weight:600; padding:0.25rem 0; text-transform:uppercase; }
+        .cal-cell { aspect-ratio:1; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:0.82rem; font-weight:500; border:1px solid transparent; transition:all 0.15s; position:relative; }
+        .cal-cell.empty { cursor:default; }
+        .cal-cell.today { border-color:var(--primary) !important; font-weight:800; color:var(--primary); }
+        .cal-cell.present { background:rgba(34,197,94,0.15); color:#4ade80; }
+        .cal-cell.absent  { background:rgba(239,68,68,0.15); color:#f87171; }
+        .cal-cell.leave   { background:rgba(245,158,11,0.15); color:#fbbf24; }
+        .cal-cell.future  { opacity:0.3; cursor:not-allowed; }
+        .cal-cell .dot    { width:5px; height:5px; border-radius:50%; position:absolute; bottom:4px; background:currentColor; }
+
+        /* Donut ring */
+        .ring-wrap { position:relative; width:120px; height:120px; flex-shrink:0; }
+        .ring-wrap svg { transform:rotate(-90deg); }
+        .ring-val { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:800; }
+        .month-nav-btn { background:rgba(255,255,255,0.05); border:1px solid var(--border); color:rgba(255,255,255,0.6); border-radius:8px; padding:0.45rem 0.85rem; cursor:pointer; font-size:0.85rem; transition:0.15s; }
+        .month-nav-btn:hover { background:rgba(255,255,255,0.1); color:#fff; }
+
+        /* Attendance alert bar */
+        .att-alert { padding:0.85rem 1.2rem; border-radius:12px; margin-bottom:1.5rem; font-size:0.875rem; font-weight:500; display:flex; align-items:center; gap:0.75rem; }
+        .att-alert.good    { background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); color:#4ade80; }
+        .att-alert.warning { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); color:#fbbf24; }
+        .att-alert.danger  { background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.2);  color:#f87171; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body animate-in">
+
+            <div class="header-row">
+                <div>
+                    <h1>My Attendance</h1>
+                    <p class="page-sub" id="attSubheading">Track your monthly attendance record</p>
+                </div>
+                <div id="top-notif-container"></div>
+            </div>
+
+            <!-- Alert bar -->
+            <div id="attAlert" class="att-alert good" style="display:none">
+                <i class="fas fa-check-circle"></i>
+                <span id="attAlertMsg"></span>
+            </div>
+
+            <!-- Stats + Donut row -->
+            <div style="display:flex; gap:1.25rem; margin-bottom:2rem; flex-wrap:wrap; align-items:stretch;">
+                <div class="att-stat" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:160px;">
+                    <div class="ring-wrap">
+                        <svg width="120" height="120" viewBox="0 0 120 120">
+                            <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12"/>
+                            <circle cx="60" cy="60" r="48" fill="none" stroke="var(--primary)" stroke-width="12"
+                                    stroke-dasharray="301.6" id="ringProgress" stroke-dashoffset="301.6" stroke-linecap="round"
+                                    style="filter:drop-shadow(0 0 8px var(--primary-glow));"/>
+                        </svg>
+                        <div class="ring-val" id="pctDisplay" style="color:var(--primary)">0%</div>
+                    </div>
+                    <div class="att-stat-lbl" style="margin-top:0.5rem">Overall %</div>
+                </div>
+                <div class="att-stat"><div class="att-stat-val" id="stPresent" style="color:#4ade80">0</div><div class="att-stat-lbl">Days Present</div></div>
+                <div class="att-stat"><div class="att-stat-val" id="stAbsent"  style="color:#f87171">0</div><div class="att-stat-lbl">Days Absent</div></div>
+                <div class="att-stat"><div class="att-stat-val" id="stLeave"   style="color:#fbbf24">0</div><div class="att-stat-lbl">On Leave</div></div>
+                <div class="att-stat"><div class="att-stat-val" id="stTotal"   style="color:rgba(255,255,255,0.7)">0</div><div class="att-stat-lbl">Total Days</div></div>
+            </div>
+
+            <!-- Performance Analytics Row -->
+            <div style="display:grid; grid-template-columns: 1fr 2fr; gap:1.25rem; margin-bottom:2rem;">
+                <!-- Participation Breakdown -->
+                <div class="panel" style="padding:1.5rem">
+                    <h3 style="margin-top:0; font-size:1rem; margin-bottom:1.5rem">Breakdown</h3>
+                    <div style="height:220px; position:relative">
+                        <canvas id="typeChart"></canvas>
+                    </div>
+                </div>
+                <!-- Monthly Trend -->
+                <div class="panel" style="padding:1.5rem">
+                    <h3 style="margin-top:0; font-size:1rem; margin-bottom:1.5rem">4-Month Trend</h3>
+                    <div style="height:220px; position:relative">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar Panel -->
+            <div class="panel">
+                <div class="cal-header">
+                    <button class="month-nav-btn" onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+                    <div>
+                        <div style="font-size:1.1rem; font-weight:700; text-align:center;" id="monthLabel">April 2026</div>
+                        <div style="font-size:0.78rem; color:var(--text-muted); text-align:center; margin-top:0.15rem;">Your attendance calendar</div>
+                    </div>
+                    <button class="month-nav-btn" onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+                </div>
+
+                <!-- Day headers -->
+                <div class="cal-grid" style="margin-bottom:0.25rem">
+                    <div class="cal-day-hdr">Sun</div><div class="cal-day-hdr">Mon</div>
+                    <div class="cal-day-hdr">Tue</div><div class="cal-day-hdr">Wed</div>
+                    <div class="cal-day-hdr">Thu</div><div class="cal-day-hdr">Fri</div>
+                    <div class="cal-day-hdr">Sat</div>
+                </div>
+
+                <!-- Calendar cells -->
+                <div class="cal-grid" id="calGrid"></div>
+
+                <!-- Legend -->
+                <div style="display:flex; gap:1.5rem; font-size:0.78rem; color:var(--text-muted); margin-top:1.5rem; flex-wrap:wrap;">
+                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:rgba(34,197,94,0.4);margin-right:0.35rem"></span>Present</span>
+                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:rgba(239,68,68,0.4);margin-right:0.35rem"></span>Absent</span>
+                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:rgba(245,158,11,0.4);margin-right:0.35rem"></span>Leave</span>
+                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;border:1px solid var(--primary);margin-right:0.35rem"></span>Today</span>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const user = requireAuth('scholar');
+let viewDate = new Date();
+let attendanceMap = {};
+
+async function init() {
+    renderSidebar('attendance.html');
+    await loadMonth();
+}
+
+async function loadMonth() {
+    const month = viewDate.getMonth() + 1;
+    const year  = viewDate.getFullYear();
+    document.getElementById('monthLabel').textContent =
+        viewDate.toLocaleDateString('en-IN', { month:'long', year:'numeric' });
+
+    try {
+        const scholarId = user.scholar_id;
+        if (!scholarId) {
+            document.getElementById('calGrid').innerHTML = `<div class="empty-state" style="grid-column:1/-1">No scholar profile linked.</div>`;
+            return;
+        }
+        const res = await apiGet(`/attendance/${scholarId}?month=${month}&year=${year}`);
+        attendanceMap = {};
+        (res.records || []).forEach(r => { attendanceMap[r.date] = r.status; });
+        renderStats(res.summary || {}, res.pct || 0);
+        renderCalendar();
+        renderCharts(res.overall || res.summary, res.monthly || []);
+    } catch(e) {
+        console.error(e);
+        // If API not ready, show empty calendar
+        renderStats({}, 0);
+        renderCalendar();
+    }
+}
+
+function renderStats(s, pct) {
+    document.getElementById('stPresent').textContent = s.present || 0;
+    document.getElementById('stAbsent').textContent  = s.absent  || 0;
+    document.getElementById('stLeave').textContent   = s.leave   || 0;
+    document.getElementById('stTotal').textContent   = s.total   || 0;
+    document.getElementById('pctDisplay').textContent = pct + '%';
+    const circumference = 301.6;
+    const offset = circumference - (pct / 100 * circumference);
+    document.getElementById('ringProgress').style.strokeDashoffset = offset;
+
+    // Alert bar
+    const alertEl  = document.getElementById('attAlert');
+    const alertMsg = document.getElementById('attAlertMsg');
+    if ((s.total || 0) > 0) {
+        alertEl.style.display = 'flex';
+        if (pct >= 75) {
+            alertEl.className = 'att-alert good';
+            alertEl.querySelector('i').className = 'fas fa-check-circle';
+            alertMsg.textContent = `Great! Your attendance is ${pct}% — above the 75% requirement.`;
+        } else if (pct >= 60) {
+            alertEl.className = 'att-alert warning';
+            alertEl.querySelector('i').className = 'fas fa-exclamation-triangle';
+            alertMsg.textContent = `Caution: Your attendance is ${pct}%. Minimum requirement is 75%.`;
+        } else {
+            alertEl.className = 'att-alert danger';
+            alertEl.querySelector('i').className = 'fas fa-times-circle';
+            alertMsg.textContent = `Critical: Attendance at ${pct}% — contact your supervisor immediately.`;
+        }
+    }
+}
+
+function renderCalendar() {
+    const grid     = document.getElementById('calGrid');
+    const today    = new Date();
+    const year     = viewDate.getFullYear();
+    const month    = viewDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInM  = new Date(year, month + 1, 0).getDate();
+
+    let cells = '';
+    for (let i = 0; i < firstDay; i++) cells += `<div class="cal-cell empty"></div>`;
+
+    for (let d = 1; d <= daysInM; d++) {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const status  = attendanceMap[dateStr];
+        const cellDate= new Date(year, month, d);
+        const isFuture= cellDate > today;
+        const isToday = cellDate.toDateString() === today.toDateString();
+
+        const cls = ['cal-cell', status || '', isFuture ? 'future' : '', isToday ? 'today' : ''].filter(Boolean).join(' ');
+
+        cells += `<div class="${cls}" title="${dateStr}${status ? ' — ' + status : ''}">
+                    ${d}
+                    ${status ? '<div class="dot"></div>' : ''}
+                  </div>`;
+    }
+    grid.innerHTML = cells;
+}
+
+let charts = {};
+function renderCharts(overall, monthly) {
+    if (charts.type) charts.type.destroy();
+    if (charts.trend) charts.trend.destroy();
+
+    const common = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }}};
+
+    charts.type = new Chart(document.getElementById('typeChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Present', 'Absent', 'Leave'],
+            datasets: [{
+                data: [overall.present, overall.absent, overall.leave],
+                backgroundColor: ['#22c55e', '#ef4444', '#f59e0b'],
+                borderWidth: 0, hoverOffset: 4
+            }]
+        },
+        options: { ...common, cutout: '75%' }
+    });
+
+    const labels = monthly.length ? monthly.map(m => m.label) : ['Jan', 'Feb', 'Mar', 'Apr'];
+    const pData  = monthly.length ? monthly.map(m => m.present) : [20, 18, 22, 19];
+    const aData  = monthly.length ? monthly.map(m => m.absent) : [2, 3, 1, 2];
+
+    charts.trend = new Chart(document.getElementById('trendChart'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                { label:'Present', data:pData, backgroundColor:'#22c55e', borderRadius:4 },
+                { label:'Absent',  data:aData, backgroundColor:'#ef4444', borderRadius:4 }
+            ]
+        },
+        options: {
+            ...common,
+            scales: {
+                x: { grid:{ display:false }, ticks:{ color:'#94a3b8', font:{size:10} }},
+                y: { grid:{ color:'rgba(255,255,255,0.05)' }, ticks:{ color:'#94a3b8', font:{size:10} }}
+            }
+        }
+    });
+}
+
+function changeMonth(delta) {
+    viewDate.setMonth(viewDate.getMonth() + delta);
+    const now = new Date();
+    if (viewDate > now) { viewDate.setMonth(viewDate.getMonth() - delta); return; }
+    loadMonth();
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Professor — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body animate-in">
+            <div class="header-row">
+                <div>
+                    <h1>My Professor</h1>
+                    <p>Manage your supervisor assignment and faculty directory</p>
+                </div>
+            </div>
+
+            <!-- Current Supervisor -->
+            <div id="supervisorSection" class="panel" style="margin-bottom:2rem">
+                <div class="panel-head"><h3>Current Supervisor</h3></div>
+                <div id="supervisorContent"><div class="empty-state">Loading...</div></div>
+            </div>
+
+            <!-- Request / Pending Status -->
+            <div id="requestSection" class="panel" style="margin-bottom:2rem">
+                <div class="panel-head"><h3>My Supervisor Requests</h3></div>
+                <div id="requestContent"><div class="empty-state">Loading...</div></div>
+            </div>
+
+            <!-- Faculty Directory to Request -->
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>Request a New Supervisor</h3>
+                    <p style="font-size:0.82rem;color:var(--text-muted);font-weight:400">Select a faculty member to send a supervisor request</p>
+                </div>
+                <div id="facultyList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.25rem;margin-top:1.25rem">
+                    <div class="empty-state">Loading faculty directory...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const user = requireAuth('scholar');
+let scholarId = null, existingRequests = [];
+
+async function init() {
+    renderSidebar('my-professor.html');
+    try {
+        const s = await apiGet(`/scholar/${user.scholar_id || user.id}`);
+        scholarId = s.id;
+
+        // Render current supervisor
+        renderSupervisor(s);
+
+        // Load request history
+        await loadRequests();
+
+        // Load faculty directory
+        await loadFaculty();
+    } catch(e) { console.error(e); toast('Failed to load data', 'error'); }
+}
+
+function renderSupervisor(s) {
+    const sec = document.getElementById('supervisorContent');
+    if (s.supervisor_id && s.supervisor_name) {
+        const initials = s.supervisor_name.replace('Dr. ','').split(' ').map(n=>n[0]).join('').toUpperCase();
+        sec.innerHTML = `
+        <div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap">
+            <div class="avatar-circle" style="width:80px;height:80px;font-size:1.75rem">${initials}</div>
+            <div style="flex:1">
+                <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:0.25rem">${s.supervisor_name}</h2>
+                <p style="color:var(--primary);font-weight:600;margin-bottom:0.25rem">Professor & Supervisor</p>
+                <p style="color:var(--text-muted);font-size:0.9rem">${s.supervisor_dept || 'Research University'}</p>
+            </div>
+            <a href="messages.html" class="btn-auth" style="width:auto;padding:0.7rem 1.5rem">
+                <i class="fas fa-envelope" style="margin-right:0.5rem"></i> Send Message
+            </a>
+        </div>`;
+    } else {
+        sec.innerHTML = `<div class="empty-state"><i class="fas fa-user-clock" style="font-size:2.5rem;opacity:0.2;margin-bottom:1rem;display:block"></i>No supervisor assigned yet. Request one below.</div>`;
+    }
+}
+
+async function loadRequests() {
+    const cont = document.getElementById('requestContent');
+    try {
+        existingRequests = await apiGet(`/scholar/${scholarId}/supervisor-request`);
+        if (!existingRequests.length) {
+            cont.innerHTML = `<div class="empty-state">No requests sent yet</div>`;
+            return;
+        }
+        cont.innerHTML = `<table style="width:100%;border-collapse:collapse">
+            <thead><tr style="border-bottom:1px solid var(--border)">
+                <th style="padding:0.6rem 0.5rem;font-size:0.8rem;color:var(--text-muted);font-weight:600;text-align:left;text-transform:uppercase">Supervisor</th>
+                <th style="padding:0.6rem 0.5rem;font-size:0.8rem;color:var(--text-muted);font-weight:600;text-align:left;text-transform:uppercase">Sent On</th>
+                <th style="padding:0.6rem 0.5rem;font-size:0.8rem;color:var(--text-muted);font-weight:600;text-align:left;text-transform:uppercase">Status</th>
+            </tr></thead>
+            <tbody>
+                ${existingRequests.map(r=>`
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.03)">
+                    <td style="padding:0.9rem 0.5rem;font-weight:600">${r.supervisor_name}</td>
+                    <td style="padding:0.9rem 0.5rem;font-size:0.85rem;color:var(--text-muted)">${new Date(r.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
+                    <td style="padding:0.9rem 0.5rem"><span class="badge ${badgeClass(r.status)}">${r.status}</span></td>
+                </tr>`).join('')}
+            </tbody>
+        </table>`;
+    } catch(e) {
+        cont.innerHTML = `<div class="empty-state">Failed to load requests</div>`;
+    }
+}
+
+async function loadFaculty() {
+    const list = document.getElementById('facultyList');
+    try {
+        const faculty = await apiGet('/supervisor/all');
+        list.innerHTML = faculty.map(f => {
+            const initials = f.name.replace('Dr. ','').split(' ').map(n=>n[0]).join('').toUpperCase();
+            const alreadyRequested = existingRequests.some(r => r.supervisor_id === f.id || r.supervisor_name === f.name);
+            return `
+            <div class="panel" style="padding:1.5rem">
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+                    <div class="avatar-circle" style="width:50px;height:50px;font-size:1rem">${initials}</div>
+                    <div>
+                        <div style="font-weight:700">${f.name}</div>
+                        <div style="font-size:0.8rem;color:var(--text-muted)">${f.designation || 'Professor'}</div>
+                    </div>
+                </div>
+                <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.5rem"><i class="fas fa-building" style="margin-right:0.4rem"></i>${f.department}</p>
+                ${f.specialization ? `<p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem"><i class="fas fa-microscope" style="margin-right:0.4rem"></i>${f.specialization}</p>` : '<div style="margin-bottom:1rem"></div>'}
+                <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:1rem"><i class="fas fa-users" style="margin-right:0.4rem"></i>${f.scholars_count || 0} current scholars</p>
+                <button onclick="sendRequest(${f.id})" 
+                    ${alreadyRequested ? 'disabled' : ''} 
+                    style="width:100%;padding:0.65rem;border-radius:8px;border:1px solid ${alreadyRequested ? 'var(--border)' : 'var(--primary)'};background:${alreadyRequested ? 'transparent' : 'rgba(0,242,255,0.08)'};color:${alreadyRequested ? 'var(--text-muted)' : 'var(--primary)'};cursor:${alreadyRequested ? 'default' : 'pointer'};font-size:0.85rem;font-weight:600;font-family:inherit;transition:0.2s">
+                    ${alreadyRequested ? '✓ Request Sent' : '+ Send Request'}
+                </button>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        list.innerHTML = `<div class="empty-state" style="grid-column:1/-1">Failed to load faculty</div>`;
+    }
+}
+
+async function sendRequest(supervisorId) {
+    try {
+        await apiPost('/scholar/request-supervisor', { scholar_id: scholarId, supervisor_id: supervisorId });
+        toast('Supervisor request sent!');
+        await loadFaculty();
+        await loadRequests();
+    } catch(err) {
+        toast(err.error || 'Failed to send request', 'error');
+    }
+}
+
+init();
+</script>
+</body>
+</html>

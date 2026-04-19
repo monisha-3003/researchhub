@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ResearchHub — Publications</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/toast.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .filter-bar { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; }
+    .filter-pill { padding:0.42rem 1.1rem; border-radius:20px; font-size:0.82rem; font-weight:500; border:1px solid var(--glass-border); background:transparent; color:var(--text-muted); cursor:pointer; transition:all 0.2s; }
+    .filter-pill.active { background:#fff; color:#000; border-color:#fff; font-weight:700; }
+    .filter-pill:not(.active):hover { border-color:var(--primary); color:var(--primary); }
+    .scholars-dropdown {
+      margin-left:auto; padding:0.4rem 0.9rem; border-radius:10px;
+      background:transparent; border:1px solid var(--glass-border); color:var(--text-muted);
+      font-size:0.82rem; font-family:inherit; cursor:pointer;
+    }
+    .scholars-dropdown option { background:#1a0a2e; }
+
+    /* Pub card */
+    .pub-card {
+      background:var(--glass); border:1px solid var(--glass-border);
+      border-radius:14px; padding:1.4rem; margin-bottom:1rem; transition:border-color 0.2s;
+    }
+    .pub-card:hover { border-color:rgba(255,255,255,0.18); }
+    .pc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:0.7rem; }
+    .pc-type { font-size:0.72rem; color:var(--primary); font-weight:600; margin-bottom:0.3rem; }
+    .pc-title { font-size:0.95rem; font-weight:700; color:#fff; line-height:1.4; }
+    .pc-status { font-size:0.72rem; font-weight:700; padding:3px 10px; border-radius:10px; white-space:nowrap; flex-shrink:0; }
+    .ps-published { background:rgba(34,197,94,0.12); color:#22c55e; }
+    .ps-review    { background:rgba(245,158,11,0.12); color:#f59e0b; }
+    .pc-meta { display:flex; gap:1.2rem; font-size:0.78rem; color:var(--text-muted); flex-wrap:wrap; }
+    .pc-meta span strong { color:rgba(255,255,255,0.75); font-weight:600; }
+
+    .stat-sb2 { display:inline-block; margin-top:0.4rem; padding:2px 10px; border-radius:20px; font-size:0.72rem; font-weight:600; }
+    .sb-green { background:rgba(34,197,94,0.12); color:#22c55e; }
+    .sb-yellow{ background:rgba(245,158,11,0.12); color:#f59e0b; }
+    .sb-blue  { background:rgba(99,102,241,0.12); color:#a5b4fc; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div id="sidebar-container"></div>
+  <main class="main-wrapper">
+    <div class="content-body animate-in">
+      <div class="page-header">
+      <h1>Publications</h1>
+      <p class="page-sub">All publications from you and your scholars</p>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
+      <div class="stat-card">
+        <div class="stat-value st-total" style="font-size:2rem">0</div>
+        <div class="stat-label">Total publications</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value st-pub" style="font-size:2rem;color:#22c55e">0</div>
+        <div class="stat-label">Published</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value st-rev" style="font-size:2rem;color:#f59e0b">0</div>
+        <div class="stat-label">Under review</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value st-app" style="font-size:2rem;color:#a5b4fc">0</div>
+        <div class="stat-label">Approved</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <button class="filter-pill active" onclick="filterPubs('all',this)">All</button>
+      <button class="filter-pill" onclick="filterPubs('published',this)">Published</button>
+      <button class="filter-pill" onclick="filterPubs('under_review',this)">Under review</button>
+      <button class="filter-pill" onclick="filterPubs('approved',this)">Approved</button>
+      <select class="scholars-dropdown" id="scholarFilter" onchange="filterByScholar(this.value)">
+        <option value="all">All scholars</option>
+      </select>
+    </div>
+
+    <!-- List -->
+    <div id="pubList"></div>
+    </div>
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const user = requireAuth('faculty');
+
+  let PUBS = [];
+  let currentFilter = 'all';
+  let scholarFilter = 'all';
+
+  if (user) { renderSidebar('sup-publications.html'); loadPendingBadge(); init(); }
+
+  async function init() {
+      const svId = user.supervisor_id || user.id;
+      try {
+          const [pubs, scholars] = await Promise.all([
+              apiGet(`/supervisor/${svId}/publications?all=1`),
+              apiGet(`/supervisor/${svId}/scholars`)
+          ]);
+          PUBS = pubs;
+          
+          document.getElementById('scholarFilter').innerHTML = `<option value="all">All scholars</option>` + scholars.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+          // Stats
+          updateStats();
+          renderPubs();
+      } catch (err) { console.error(err); }
+  }
+
+  function updateStats() {
+      const total = PUBS.length;
+      const pubbed = PUBS.filter(p => p.status === 'published').length;
+      const review = PUBS.filter(p => p.status === 'under_review').length;
+      const approved = PUBS.filter(p => p.status === 'approved').length;
+      
+      document.querySelector('.st-total').textContent = total;
+      document.querySelector('.st-pub').textContent = pubbed;
+      document.querySelector('.st-rev').textContent = review;
+      document.querySelector('.st-app').textContent = approved;
+  }
+
+  function filterPubs(f, btn) {
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = f;
+    renderPubs();
+  }
+
+  function filterByScholar(val) { scholarFilter = val; renderPubs(); }
+
+  function renderPubs() {
+    let data = PUBS;
+    if (currentFilter !== 'all') data = data.filter(p => p.status === currentFilter);
+    if (scholarFilter !== 'all') data = data.filter(p => p.scholar_id == scholarFilter);
+
+    const list = document.getElementById('pubList');
+    if (!data.length) {
+        list.innerHTML = `<div class="empty-state" style="padding:4rem; text-align:center; background:rgba(255,255,255,0.02); border-radius:16px; border:1px dashed var(--glass-border);">
+            <i class="fas fa-book-open fa-3x" style="color:rgba(255,255,255,0.1); margin-bottom:1.5rem"></i>
+            <div style="color:var(--text-muted)">No publications found matching these filters.</div>
+        </div>`;
+        return;
+    }
+
+    list.innerHTML = data.map(p => `
+      <div class="pub-card animate-in" id="pub-${p.id}">
+        <div class="pc-top">
+          <div>
+            <div class="pc-type">${p.pub_type ? p.pub_type.toUpperCase() : 'RESEARCH'}</div>
+            <div class="pc-title">${p.title}</div>
+          </div>
+          <span class="pc-status ps-${p.status === 'published' ? 'published' : (p.status === 'under_review' ? 'review' : 'published')}">
+            ${p.status.replace('_', ' ')}
+          </span>
+        </div>
+        <div class="pc-meta">
+          <span><i class="fas fa-graduation-cap"></i> <strong>${p.scholar_name || 'Scholar'}</strong></span>
+          <span><i class="fas fa-building"></i> <strong>${p.journal || 'Academic Journal'}</strong></span>
+          <span><i class="fas fa-calendar-alt"></i> <strong>${p.year || '2024'}</strong></span>
+          ${p.doi ? `<span><i class="fas fa-link"></i> <a href="https://doi.org/${p.doi}" target="_blank" style="color:var(--primary); text-decoration:none">${p.doi}</a></span>` : ''}
+        </div>
+        ${p.status === 'under_review' ? `
+        <div style="margin-top:1.2rem; border-top:1px solid var(--glass-border); padding-top:1rem; display:flex; gap:0.75rem">
+            <button onclick="approvePub(${p.id}, 'approved')" class="action-btn" style="padding:0.5rem 1.2rem; background:rgba(34,197,94,0.12); color:#22c55e; border:1px solid rgba(34,197,94,0.3); border-radius:8px; font-weight:700; cursor:pointer">
+                <i class="fas fa-check" style="margin-right:0.4rem"></i> Approve
+            </button>
+            <button onclick="approvePub(${p.id}, 'rejected')" class="action-btn" style="padding:0.5rem 1.2rem; background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); border-radius:8px; font-weight:700; cursor:pointer">
+                <i class="fas fa-times" style="margin-right:0.4rem"></i> Reject
+            </button>
+        </div>` : ''}
+      </div>`).join('');
+  }
+
+  async function approvePub(id, status) {
+      toast('Updating publication status...');
+      try {
+          await apiPut(`/supervisor/publication/${id}/approve`, { status: status });
+          toast(`Publication ${status}!`);
+          init();
+      } catch(e) { toast('Error updating publication', 'error'); }
+  }
+</script>
+</body>
+</html>

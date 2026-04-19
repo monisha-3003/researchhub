@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ── Layout ── */
+        .messages-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            height: calc(100vh - 160px);
+            min-height: 500px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        /* ── Left panel ── */
+        .chat-sidebar {
+            display: flex; flex-direction: column;
+            border-right: 1px solid var(--border);
+            background: rgba(0,0,0,0.15);
+        }
+        .chat-sidebar-header {
+            padding: 1rem 1.1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            font-weight: 700; font-size: 0.95rem;
+            flex-shrink: 0;
+        }
+        .chat-search {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .chat-search input {
+            width: 100%; background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border); border-radius: 8px;
+            padding: 0.45rem 0.75rem; color: #fff; font-family: inherit;
+            font-size: 0.82rem; outline: none;
+        }
+        .conv-list { flex: 1; overflow-y: auto; }
+        .conv-item {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.85rem 1.1rem;
+            cursor: pointer; transition: background 0.15s;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            position: relative;
+        }
+        .conv-item:hover { background: rgba(255,255,255,0.04); }
+        .conv-item.active { background: rgba(0,212,255,0.07); border-left: 3px solid var(--primary); }
+        .conv-avatar {
+            width: 42px; height: 42px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; font-weight: 700; color: #fff; flex-shrink: 0;
+            background: linear-gradient(135deg,#6366f1,#7c3aed);
+        }
+        .conv-avatar.faculty-av { background: linear-gradient(135deg,#0ea5e9,#0284c7); }
+        .conv-info { flex: 1; min-width: 0; }
+        .conv-name { font-weight: 600; font-size: 0.875rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .conv-sub  { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .role-tag { font-size: 0.65rem; padding: 1px 7px; border-radius: 999px; font-weight: 600; margin-top: 0.15rem; display: inline-block; }
+        .rt-faculty { background: rgba(14,165,233,0.15); color: #38bdf8; }
+        .rt-scholar { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+
+        /* ── Right panel ── */
+        .chat-main { display: flex; flex-direction: column; }
+        .chat-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 0.85rem;
+            flex-shrink: 0; background: rgba(0,0,0,0.1);
+        }
+        .chat-history {
+            flex:1; overflow-y:auto; padding:1.25rem;
+            display:flex; flex-direction:column; gap:0.6rem;
+        }
+        .msg-row { display:flex; margin-bottom: 4px; }
+        .msg-row.sent { justify-content:flex-end; }
+        .msg-row.received { justify-content:flex-start; }
+        .msg-bubble {
+            max-width: 68%; padding: 0.65rem 0.9rem;
+            border-radius: 14px; font-size: 0.875rem; line-height: 1.5;
+            position: relative; word-break: break-word;
+        }
+        .msg-row.received .msg-bubble { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
+        .msg-row.sent .msg-bubble { background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,212,255,0.1)); border: 1px solid rgba(0,212,255,0.25); }
+        .msg-time { display: block; font-size: 0.65rem; opacity: 0.5; margin-top: 0.3rem; text-align: right; }
+        .chat-footer { padding: 0.85rem 1.25rem; border-top: 1px solid var(--border); background: rgba(0,0,0,0.1); }
+        .chat-input-wrapper { display: flex; align-items: center; gap: 0.6rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 12px; padding: 0.5rem 0.75rem; }
+        .chat-input { flex:1; background:transparent; border:none; outline:none; color:#fff; font-size:0.875rem; }
+        .btn-send { width:34px; height:34px; border-radius:8px; border:none; background:var(--primary); color:#000; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+
+        /* ── Modals ── */
+        .new-msg-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:9999; backdrop-filter:blur(4px); }
+        .new-msg-modal.open { display:flex; }
+        .modal-box { width:90%; max-width:480px; background:#131920; border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+        .modal-hdr { padding:1.1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; font-weight:700; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body" style="padding-bottom:0.8rem">
+            <div class="header-row">
+                <div>
+                    <h1>Messages</h1>
+                    <p id="msgSubtitle">Real-time communication with scholars and faculty</p>
+                </div>
+                <button class="action-btn" onclick="openNewMsgModal()"><i class="fas fa-plus"></i> New Message</button>
+            </div>
+
+            <div class="messages-layout">
+                <div class="chat-sidebar">
+                    <div class="chat-search">
+                        <input type="text" id="convSearch" placeholder="Search people..." oninput="filterConversations(this.value)">
+                    </div>
+                    <div class="conv-list" id="convList"></div>
+                </div>
+                <div class="chat-main">
+                    <div class="chat-header" id="chatHeader">
+                        <div class="chat-header-name" id="chatName">Select a conversation</div>
+                    </div>
+                    <div class="chat-history" id="chatHistory">
+                        <div style="height:100%; display:flex; align-items:center; justify-content:center; color:var(--text-muted); opacity:0.5">
+                            <i class="fas fa-comments fa-3x"></i>
+                        </div>
+                    </div>
+                    <div class="chat-footer">
+                        <div class="chat-input-wrapper">
+                            <input type="text" class="chat-input" id="msgInput" placeholder="Type a message..." disabled onkeydown="if(event.key==='Enter') sendMessage()">
+                            <button class="btn-send" id="sendBtn" onclick="sendMessage()" disabled><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Contact Modal -->
+<div class="new-msg-modal" id="newMsgModal">
+    <div class="modal-box">
+        <div class="modal-hdr">
+            <span>New Conversation</span>
+            <button onclick="closeNewMsgModal()" class="action-btn" style="background:transparent"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="modalList" style="max-height:400px; overflow-y:auto"></div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+    const user = requireAuth();
+    const myId = user.id || user.user_id;
+    let activeChatId = null;
+    let allContacts = [];
+
+    // Helper for circular avatars
+    function initials(name) {
+        if (!name) return '?';
+        return name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+    }
+
+    async function init() {
+        renderSidebar('messages.html');
+        await loadConversations();
+        
+        // Auto-open chat if ID in URL
+        const params = new URLSearchParams(window.location.search);
+        const contactId = params.get('contact_id');
+        if (contactId) {
+            try {
+                const res = await apiGet('/messages/available-recipients/' + myId);
+                const partner = res.find(r => (r.user_id || r.id) == contactId);
+                if (partner) {
+                    startChat(partner.user_id || partner.id, partner.name, partner.role);
+                } else {
+                    console.log("Partner not found in available recipients list");
+                }
+            } catch(e) { console.error("Auto-open chat failed:", e); }
+        }
+        
+        setInterval(async () => {
+            if (activeChatId) await loadMessages(true);
+            await loadConversations(true);
+        }, 5000);
+    }
+
+    async function loadConversations(silent = false) {
+        try {
+            const convs = await apiGet('/messages/conversations-list/' + myId);
+            const list = document.getElementById('convList');
+            if (convs.length === 0 && !silent) {
+                list.innerHTML = '<div style="padding:2rem; text-align:center; opacity:0.5">No conversations</div>';
+                return;
+            }
+            list.innerHTML = convs.map(c => `
+                <div class="conv-item ${c.user_id == activeChatId ? 'active' : ''}" onclick="startChat(${c.user_id}, '${c.name}', '${c.role}')">
+                    <div class="conv-avatar ${c.role === 'faculty' ? 'faculty-av' : ''}">${initials(c.name)}</div>
+                    <div class="conv-info">
+                        <div class="conv-name">${c.name}</div>
+                        <div class="conv-sub">${c.last_message || 'No messages yet'}</div>
+                        <span class="role-tag ${c.role==='faculty'?'rt-faculty':'rt-scholar'}">${c.role}</span>
+                    </div>
+                    ${c.unread > 0 ? '<div class="badge-success" style="border-radius:50%; width:10px; height:10px"></div>' : ''}
+                </div>
+            `).join('');
+        } catch(e) { console.error(e); }
+    }
+
+    async function loadMessages(silent = false) {
+        if (!activeChatId) return;
+        const history = document.getElementById('chatHistory');
+        const msgs = await apiGet('/messages/conversation?user1=' + myId + '&user2=' + activeChatId);
+        
+        const html = msgs.map(m => `
+            <div class="msg-row ${m.sender_id == myId ? 'sent' : 'received'}">
+                <div class="msg-bubble">
+                    ${m.content}
+                    <span class="msg-time">${new Date(m.sent_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                </div>
+            </div>
+        `).join('');
+        
+        if (history.innerHTML !== html) {
+            history.innerHTML = html;
+            history.scrollTop = history.scrollHeight;
+        }
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('msgInput');
+        const text = input.value.trim();
+        if (!text || !activeChatId) return;
+        
+        const btn = document.getElementById('sendBtn');
+        btn.disabled = true;
+        
+        try {
+            await apiPost('/messages/', { sender_id: myId, receiver_id: activeChatId, content: text });
+            input.value = '';
+            showToast("Success", "Message sent successfully", "success");
+            await loadMessages();
+            await loadConversations();
+        } catch(e) {
+            showToast("Error", "Failed to send message", "error");
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function openNewMsgModal() {
+        document.getElementById('newMsgModal').classList.add('open');
+        const contacts = await apiGet('/messages/available-recipients/' + myId);
+        document.getElementById('modalList').innerHTML = contacts.map(c => `
+            <div class="conv-item" onclick="startChat(${c.user_id||c.id}, '${c.name}', '${c.role}'); closeNewMsgModal()">
+                <div class="conv-avatar ${c.role==='faculty'?'faculty-av':''}">${initials(c.name)}</div>
+                <div class="conv-info">
+                    <div class="conv-name">${c.name}</div>
+                    <div class="conv-sub">${c.department || c.role}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function startChat(id, name, role) {
+        activeChatId = id;
+        document.getElementById('chatName').innerText = name;
+        document.getElementById('msgInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+        loadMessages();
+        loadConversations();
+    }
+
+    function closeNewMsgModal() { document.getElementById('newMsgModal').classList.remove('open'); }
+    init();
+</script>
+</body>
+</html>

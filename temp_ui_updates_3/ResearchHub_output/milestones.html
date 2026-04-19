@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Milestones — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body animate-in">
+            <div class="header-row">
+                <div>
+                    <h1>Milestones</h1>
+                    <p>Track your research progress and thesis journey</p>
+                </div>
+                <button class="btn-auth" style="width:auto;padding:0.7rem 1.5rem" onclick="openAddModal()">
+                    <i class="fas fa-plus" style="margin-right:0.5rem"></i> Add Milestone
+                </button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="panel" style="margin-bottom:2rem">
+                <div class="pj-header">
+                    <h3>Overall Thesis Progress</h3>
+                    <span id="progressPct">0% Complete</span>
+                </div>
+                <div class="journey-track">
+                    <div class="journey-fill" id="journeyFill" style="width:0%"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:1rem;" id="journeySteps"></div>
+            </div>
+
+            <!-- Milestone Cards -->
+            <div id="milestoneGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.5rem">
+                <div class="empty-state" style="grid-column:1/-1">Loading milestones...</div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Modal: Add/Edit Milestone -->
+<div id="msModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;align-items:center;justify-content:center">
+    <div class="panel" style="width:480px">
+        <div class="panel-head">
+            <h3 id="msModalTitle">Add Milestone</h3>
+            <button onclick="closeMsModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.3rem">&times;</button>
+        </div>
+        <form id="msForm" onsubmit="saveMilestone(event)">
+            <input type="hidden" id="msId">
+            <div class="form-group">
+                <label>Milestone Title *</label>
+                <input type="text" id="msTitle" class="form-control" required placeholder="e.g. Literature Review">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="msDesc" class="form-control" placeholder="Optional details..."></textarea>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                <div class="form-group">
+                    <label>Due Date</label>
+                    <input type="date" id="msDue" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="msStatus" class="form-control">
+                        <option value="pending">Pending</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:flex;gap:1rem;justify-content:flex-end;margin-top:1rem">
+                <button type="button" onclick="closeMsModal()" style="padding:0.75rem 1.5rem;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer">Cancel</button>
+                <button type="submit" class="btn-auth" style="width:auto;padding:0.75rem 1.5rem">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const user = requireAuth('scholar');
+let scholarId = null;
+
+async function init() {
+    renderSidebar('milestones.html');
+    // Render journey step labels
+    document.getElementById('journeySteps').innerHTML = ['Coursework','Proposal','Synopsis','Seminar','Submission'].map(s=>`
+        <div style="text-align:center;flex:1"><div style="font-size:0.78rem;color:var(--text-muted);font-weight:500">${s}</div></div>`).join('');
+    try {
+        const s = await apiGet(`/scholar/${user.scholar_id || user.id}`);
+        scholarId = s.id;
+        await loadMilestones();
+    } catch(e) { console.error(e); }
+}
+
+async function loadMilestones() {
+    const grid = document.getElementById('milestoneGrid');
+    try {
+        const ms = await apiGet(`/milestones/${scholarId}`);
+        const done = ms.filter(m => m.status === 'completed').length;
+        const pct  = ms.length ? Math.round(done/ms.length*100) : 0;
+        document.getElementById('progressPct').textContent = `${pct}% Complete (${done}/${ms.length})`;
+        document.getElementById('journeyFill').style.width = pct + '%';
+
+        if (!ms.length) {
+            grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-tasks" style="font-size:3rem;opacity:0.15;margin-bottom:1rem;display:block"></i>No milestones yet. Add your first one!</div>`;
+            return;
+        }
+
+        const statusIcons = { completed:'fa-check-circle', in_progress:'fa-spinner', pending:'fa-clock' };
+        const statusColors = { completed:'#22c55e', in_progress:'#f59e0b', pending:'var(--text-muted)' };
+
+        grid.innerHTML = ms.map(m => `
+        <div class="panel" style="border-left:3px solid ${statusColors[m.status]}">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem">
+                <div>
+                    <h3 style="font-weight:600;margin-bottom:0.25rem">${m.title}</h3>
+                    ${m.due_date ? `<p style="font-size:0.8rem;color:var(--text-muted)">Due: ${new Date(m.due_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</p>` : ''}
+                </div>
+                <span class="badge ${badgeClass(m.status)}">${m.status.replace('_',' ')}</span>
+            </div>
+            ${m.description ? `<p style="font-size:0.85rem;opacity:0.7;margin-bottom:1rem;line-height:1.5">${m.description}</p>` : ''}
+            <div style="display:flex;gap:0.75rem;margin-top:auto">
+                ${m.status !== 'completed' ? `
+                <button onclick="markDone(${m.id})" style="flex:1;padding:0.6rem;border-radius:8px;border:1px solid #22c55e;background:rgba(34,197,94,0.08);color:#22c55e;cursor:pointer;font-size:0.8rem;font-weight:600">
+                    <i class="fas fa-check"></i> Mark Done
+                </button>` : `<div style="flex:1;padding:0.6rem;text-align:center;font-size:0.8rem;color:#22c55e;font-weight:600">✓ Completed ${m.completed_at ? new Date(m.completed_at).toLocaleDateString() : ''}</div>`}
+                <button onclick="openEditModal(${JSON.stringify(m).replace(/"/g,"&quot;")})" style="padding:0.6rem 1rem;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-size:0.8rem">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </div>
+        </div>`).join('');
+    } catch(e) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;color:#ef4444">Failed to load</div>`;
+    }
+}
+
+async function markDone(id) {
+    try {
+        await apiPut(`/milestones/${id}`, { status: 'completed' });
+        toast('Milestone marked as completed!');
+        await loadMilestones();
+    } catch(e) { toast('Failed to update', 'error'); }
+}
+
+function openAddModal() {
+    document.getElementById('msModalTitle').textContent = 'Add Milestone';
+    document.getElementById('msId').value = '';
+    document.getElementById('msForm').reset();
+    document.getElementById('msModal').style.display = 'flex';
+}
+
+function openEditModal(m) {
+    document.getElementById('msModalTitle').textContent = 'Edit Milestone';
+    document.getElementById('msId').value = m.id;
+    document.getElementById('msTitle').value = m.title;
+    document.getElementById('msDesc').value = m.description || '';
+    document.getElementById('msDue').value = m.due_date || '';
+    document.getElementById('msStatus').value = m.status;
+    document.getElementById('msModal').style.display = 'flex';
+}
+
+function closeMsModal() {
+    document.getElementById('msModal').style.display = 'none';
+}
+
+async function saveMilestone(e) {
+    e.preventDefault();
+    const id = document.getElementById('msId').value;
+    const payload = {
+        scholar_id  : scholarId,
+        title       : document.getElementById('msTitle').value.trim(),
+        description : document.getElementById('msDesc').value.trim(),
+        due_date    : document.getElementById('msDue').value || null,
+        status      : document.getElementById('msStatus').value,
+    };
+    try {
+        if (id) await apiPut(`/milestones/${id}`, payload);
+        else    await apiPost('/milestones/', payload);
+        toast(id ? 'Milestone updated!' : 'Milestone added!');
+        closeMsModal();
+        await loadMilestones();
+    } catch(e) { toast('Save failed', 'error'); }
+}
+
+init();
+</script>
+</body>
+</html>

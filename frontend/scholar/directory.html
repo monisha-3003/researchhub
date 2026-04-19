@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResearchHub — Faculty Directory</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/shared.css?v=4">
+<style>
+.dir-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.dir-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; transition: all .2s; cursor: pointer; }
+.dir-card:hover { border-color: var(--blue); box-shadow: 0 4px 20px rgba(79,94,245,.1); transform: translateY(-2px); }
+.dir-avatar { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 14px; }
+.dir-name { font-size: 15px; font-weight: 700; color: var(--text); }
+.dir-role { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.dir-dept { margin-top: 10px; }
+.dir-actions { display: flex; gap: 8px; margin-top: 16px; }
+.dir-actions button { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer; font-weight: 500; transition: all .15s; }
+.btn-msg { background: var(--blue-light); color: var(--blue); border-color: #c5cde8 !important; }
+.btn-msg:hover { background: var(--blue); color: #fff; }
+.btn-req { background: var(--green-light); color: var(--green); border-color: #a8d4c0 !important; }
+.btn-req:hover { background: var(--green); color: #fff; }
+.search-bar { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+.search-bar input { border: none; background: none; outline: none; font-size: 14px; font-family: 'Inter', sans-serif; color: var(--text); width: 100%; }
+.colors { background: linear-gradient(135deg, #5b6ef5, #4355e8); }
+.colors2 { background: linear-gradient(135deg, #2e7d52, #27ae60); }
+.colors3 { background: linear-gradient(135deg, #b07a2a, #e67e22); }
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><svg width="18" height="18" viewBox="0 0 32 32" fill="none"><path d="M16 6L4 13l12 7 12-7-12-7z" fill="white"/><path d="M4 19l12 7 12-7" stroke="white" stroke-width="2" stroke-linecap="round" opacity=".75"/></svg></div>
+      <div><div class="brand-name">ResearchHub</div><div class="brand-role">Scholar Portal</div></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <a class="nav-item" href="/scholar-dashboard.html">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".4"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".4"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".4"/></svg>
+      Dashboard</a>
+    <a class="nav-item" href="/my-professor.html">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><circle cx="6" cy="5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M1 13c0-3 2.2-5 5-5s5 2 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M12 7v4M14 9h-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      My Professor</a>
+    <a class="nav-item active" href="directory.html">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.3"/><circle cx="3" cy="12" r="2" stroke="currentColor" stroke-width="1.3" opacity=".5"/><circle cx="13" cy="12" r="2" stroke="currentColor" stroke-width="1.3" opacity=".5"/></svg>
+      Faculty Directory</a>
+    <a class="nav-item" href="/milestones.html">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v3.5l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Milestones</a>
+    <a class="nav-item" href="/publications.html">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Publications</a>
+    <a class="nav-item" href="/leaverequest.html">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M2 11V5l5-3 5 3v6l-5 3-5-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+      Leave Request</a>
+    <a class="nav-item" href="/attendance.html">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Attendance</a>
+    <a class="nav-item" href="/documents.html">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M3 2h10v12H3z" stroke="currentColor" stroke-width="1.3"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Documents</a>
+    <a class="nav-item" href="/stipend.html">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v6M5.5 7.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Stipend</a>
+    <a class="nav-item" href="messages.html">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M4 7h8M4 10h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Messages</a>
+    <a class="nav-item" href="profile.html">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M2 13c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Profile</a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-chip">
+      <div class="avatar" id="sb-avatar">S</div>
+      <div><div class="user-name" id="sb-name">Scholar</div><div class="user-dept" id="sb-dept">Loading...</div></div>
+    </div>
+    <div class="logout-btn" onclick="doLogout()">
+      <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M6 3H3v10h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Sign out
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title">Faculty Directory</div>
+      <div class="page-sub">Find and connect with supervisors across departments</div>
+    </div>
+  </div>
+
+  <div class="search-bar">
+    <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><circle cx="7" cy="7" r="5" stroke="var(--muted)" stroke-width="1.3"/><path d="M11 11l3 3" stroke="var(--muted)" stroke-width="1.3" stroke-linecap="round"/></svg>
+    <input type="text" id="search-input" placeholder="Search by name or department..." oninput="filterFaculty()">
+  </div>
+
+  <div class="dir-grid" id="faculty-grid">
+    <div class="empty-state"><p>Loading faculty...</p></div>
+  </div>
+</main>
+
+<script src="/js/api.js?v=4"></script>
+<script>
+  const session = requireAuth('scholar');
+  if (!session) throw new Error('Not authenticated');
+
+  document.getElementById('sb-name').textContent   = session.name || 'Scholar';
+  document.getElementById('sb-avatar').textContent = (session.name || 'S').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('sb-dept').textContent   = session.department || '';
+
+  function doLogout() { logout(); }
+
+  let allFaculty = [];
+  let pendingRequests = [];
+  let myProfile = null;
+  const colorClasses = ['colors', 'colors2', 'colors3'];
+
+  async function loadData() {
+    try {
+      const sId = session.scholar_id || session.id;
+      // Load everything needed
+      [allFaculty, myProfile] = await Promise.all([
+        apiGet('/supervisor/all'),
+        apiGet(`/scholar/${sId}`)
+      ]);
+
+      // Load pending requests
+      try {
+        const reqs = await apiGet(`/scholar/${sId}/supervisor-request`);
+        pendingRequests = reqs.filter(r => r.status === 'pending').map(r => r.supervisor_id);
+      } catch(_) {}
+
+      renderFaculty(allFaculty);
+    } catch(e) {
+      document.getElementById('faculty-grid').innerHTML = '<div class="empty-state"><p>Could not load faculty data.</p></div>';
+    }
+  }
+
+  function getButton(f) {
+    console.log('Checking button for', f.name, 'f.id:', f.id, 'myProfile.supervisor_id:', myProfile?.supervisor_id);
+    if (myProfile && Number(myProfile.supervisor_id) === Number(f.id)) {
+        return `<button class="btn-req" style="background:#f3f4f6; color:#9ca3af; border-color:#e5e7eb !important; cursor:default;" disabled>✓ Your Supervisor</button>`;
+    }
+    const isPending = pendingRequests.some(prId => Number(prId) === Number(f.id));
+    if (isPending) {
+        return `<button class="btn-req" style="background:#fff7ed; color:#ea580c; border-color:#fdba74 !important; cursor:default;" disabled>⌛ Requested</button>`;
+    }
+    return `<button class="btn-req" onclick="sendReq(${f.id})">✚ Request</button>`;
+  }
+
+  function renderFaculty(list) {
+    const grid = document.getElementById('faculty-grid');
+    if (!list.length) { grid.innerHTML = '<div class="empty-state"><p>No faculty found.</p></div>'; return; }
+    grid.innerHTML = list.map((f, i) => `
+      <div class="dir-card">
+        <div class="dir-avatar ${colorClasses[i % 3]}">${(f.name || 'F').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)}</div>
+        <div class="dir-name">${f.name}</div>
+        <div class="dir-role">${f.designation || 'Professor'} · ${f.department || 'N/A'}</div>
+        <div class="dir-dept"><span class="badge badge-blue">${f.department || 'Department'}</span></div>
+        <div class="dir-actions">
+          <button class="btn-msg" onclick="window.location.href='messages.html?contact_id=${f.user_id}'">💬 Message</button>
+          ${getButton(f)}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function sendReq(id) {
+    try {
+      await apiPost('/scholar/request-supervisor', { 
+        scholar_id: session.scholar_id || session.id, 
+        supervisor_id: id 
+      });
+      toast('Request sent successfully!');
+      loadData();
+    } catch(e) { toast(e.error || 'Failed to send request', 'error'); }
+  }
+
+  function filterFaculty() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    renderFaculty(allFaculty.filter(f => (f.name + (f.department||'')).toLowerCase().includes(q)));
+  }
+
+  loadData();
+</script>
+</body>
+</html>

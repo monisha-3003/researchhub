@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .scholar-pill { padding:0.5rem 1.1rem;border-radius:20px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.55);font-size:0.85rem;font-family:'Outfit',sans-serif;cursor:pointer;transition:all 0.2s; }
+        .scholar-pill.active { border-color:var(--primary);background:rgba(0,212,255,0.1);color:var(--primary);font-weight:600; }
+
+        /* Stat mini-cards */
+        .att-stat { flex:1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;text-align:center; }
+        .att-stat-val { font-size:2rem;font-weight:800;line-height:1; }
+        .att-stat-lbl { font-size:0.78rem;color:var(--text-muted);margin-top:0.3rem;font-weight:500; }
+
+        /* Calendar */
+        .cal-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem; }
+        .cal-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:0.4rem; }
+        .cal-day-hdr { text-align:center;font-size:0.72rem;color:var(--text-muted);font-weight:600;padding:0.25rem 0;text-transform:uppercase; }
+        .cal-cell { aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all 0.15s;position:relative; }
+        .cal-cell:hover { border-color:var(--primary);background:rgba(0,212,255,0.05); }
+        .cal-cell.empty { cursor:default; }
+        .cal-cell.today { border-color:var(--primary)!important;font-weight:800;color:var(--primary); }
+        .cal-cell.present { background:rgba(34,197,94,0.15);color:#4ade80; }
+        .cal-cell.absent  { background:rgba(239,68,68,0.15); color:#f87171; }
+        .cal-cell.leave   { background:rgba(245,158,11,0.15);color:#fbbf24; }
+        .cal-cell.future  { opacity:0.3;cursor:not-allowed; }
+        .cal-cell .dot    { width:5px;height:5px;border-radius:50%;position:absolute;bottom:4px;background:currentColor; }
+
+        /* Mark buttons */
+        .mark-btn { padding:0.5rem 1.1rem;border-radius:8px;border:1px solid var(--border);font-size:0.82rem;font-family:'Outfit',sans-serif;cursor:pointer;font-weight:600;transition:all 0.15s; }
+        .mark-present { background:rgba(34,197,94,0.12);color:#4ade80;border-color:rgba(34,197,94,0.3); }
+        .mark-present:hover { background:rgba(34,197,94,0.25); }
+        .mark-absent  { background:rgba(239,68,68,0.12);color:#f87171;border-color:rgba(239,68,68,0.3); }
+        .mark-absent:hover  { background:rgba(239,68,68,0.25); }
+        .mark-leave   { background:rgba(245,158,11,0.12);color:#fbbf24;border-color:rgba(245,158,11,0.3); }
+        .mark-leave:hover   { background:rgba(245,158,11,0.25); }
+
+        /* Progress ring */
+        .ring-wrap { position:relative;width:100px;height:100px;flex-shrink:0; }
+        .ring-wrap svg { transform:rotate(-90deg); }
+        .ring-val { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:800; }
+        .month-nav-btn { background:rgba(255,255,255,0.05);border:1px solid var(--border);color:rgba(255,255,255,0.6);border-radius:8px;padding:0.45rem 0.85rem;cursor:pointer;font-size:0.85rem;transition:0.15s; }
+        .month-nav-btn:hover { background:rgba(255,255,255,0.1);color:#fff; }
+        /* Mark attendance section - always visible */
+        .mark-section {
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .mark-section-label { font-size:0.85rem; color:var(--text-muted); font-weight:500; flex:1; min-width:180px; }
+        .mark-section-label strong { color:#fff; }
+        .mark-btn-group { display:flex; gap:0.6rem; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body animate-in">
+
+            <div class="header-row">
+                <div>
+                    <h1>Attendance</h1>
+                    <p style="color:var(--text-muted);font-size:0.9rem;margin-top:0.3rem">Mark and track scholar attendance month-by-month</p>
+                </div>
+                <div id="top-notif-container"></div>
+            </div>
+
+            <!-- Scholar selector -->
+            <div class="panel" style="margin-bottom:2rem">
+                <div style="font-size:0.82rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:1rem">Select Scholar</div>
+                <div id="scholarPills" style="display:flex;flex-wrap:wrap;gap:0.75rem">
+                    <div class="empty-state" style="width:100%">Loading scholars...</div>
+                </div>
+            </div>
+
+            <!-- Main attendance panel -->
+            <div id="attPanel" style="display:none">
+
+                <!-- Stats + Ring row -->
+                <div style="display:flex;gap:1.25rem;margin-bottom:2rem;flex-wrap:wrap;align-items:stretch">
+                    <div class="att-stat" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:140px">
+                        <div class="ring-wrap">
+                            <svg width="100" height="100" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
+                                <circle cx="50" cy="50" r="40" fill="none" stroke="#00d4ff" stroke-width="10"
+                                        stroke-dasharray="251.2" id="ringProgress" stroke-dashoffset="251.2" stroke-linecap="round"/>
+                            </svg>
+                            <div class="ring-val" id="pctDisplay" style="color:var(--primary)">0%</div>
+                        </div>
+                        <div class="att-stat-lbl" style="margin-top:0.5rem">Attendance %</div>
+                    </div>
+                    <div class="att-stat"><div class="att-stat-val" id="stPresent" style="color:#4ade80">0</div><div class="att-stat-lbl">Days Present</div></div>
+                    <div class="att-stat"><div class="att-stat-val" id="stAbsent"  style="color:#f87171">0</div><div class="att-stat-lbl">Days Absent</div></div>
+                    <div class="att-stat"><div class="att-stat-val" id="stLeave"   style="color:#fbbf24">0</div><div class="att-stat-lbl">On Leave</div></div>
+                    <div class="att-stat"><div class="att-stat-val" id="stTotal"   style="color:rgba(255,255,255,0.7)">0</div><div class="att-stat-lbl">Total Days</div></div>
+                </div>
+
+                <!-- Calendar Panel -->
+                <div class="panel">
+                    <!-- Month nav -->
+                    <div class="cal-header">
+                        <button class="month-nav-btn" onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+                        <div>
+                            <div style="font-size:1.1rem;font-weight:700;text-align:center" id="monthLabel">April 2025</div>
+                            <div style="font-size:0.78rem;color:var(--text-muted);text-align:center;margin-top:0.15rem">Click a date to mark attendance</div>
+                        </div>
+                        <button class="month-nav-btn" onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+
+                    <!-- Day headers -->
+                    <div class="cal-grid" style="margin-bottom:0.25rem">
+                        <div class="cal-day-hdr">Sun</div><div class="cal-day-hdr">Mon</div>
+                        <div class="cal-day-hdr">Tue</div><div class="cal-day-hdr">Wed</div>
+                        <div class="cal-day-hdr">Thu</div><div class="cal-day-hdr">Fri</div>
+                        <div class="cal-day-hdr">Sat</div>
+                    </div>
+
+                    <!-- Calendar cells -->
+                    <div class="cal-grid" id="calGrid"></div>
+
+                    <!-- Mark buttons - Always visible below calendar -->
+                    <div id="markSection" class="mark-section" style="margin-top:1.5rem; display:none;">
+                        <div class="mark-section-label">
+                            Mark <strong id="selDateLabel">—</strong> as:
+                        </div>
+                        <div class="mark-btn-group">
+                            <button class="mark-btn mark-present" onclick="markDate('present')">
+                                <i class="fas fa-check" style="margin-right:0.35rem"></i>Present
+                            </button>
+                            <button class="mark-btn mark-absent" onclick="markDate('absent')">
+                                <i class="fas fa-times" style="margin-right:0.35rem"></i>Absent
+                            </button>
+                            <button class="mark-btn mark-leave" onclick="markDate('leave')">
+                                <i class="fas fa-umbrella-beach" style="margin-right:0.35rem"></i>Leave
+                            </button>
+                        </div>
+                    </div>
+                    <div id="noDateMsg" style="margin-top:1.25rem; font-size:0.82rem; color:var(--text-muted); text-align:center; padding:0.75rem;">
+                        <i class="fas fa-mouse-pointer" style="margin-right:0.4rem; opacity:0.5"></i>Click any past date on the calendar to mark attendance
+                    </div>
+
+                    <!-- Legend -->
+                    <div style="display:flex; gap:1.25rem; font-size:0.78rem; color:var(--text-muted); margin-top:1rem; flex-wrap:wrap;">
+                        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:rgba(34,197,94,0.3);margin-right:0.35rem"></span>Present</span>
+                        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:rgba(239,68,68,0.3);margin-right:0.35rem"></span>Absent</span>
+                        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:rgba(245,158,11,0.3);margin-right:0.35rem"></span>Leave</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="noScholarMsg" class="panel" style="text-align:center;padding:4rem 2rem">
+                <i class="fas fa-calendar-alt" style="font-size:3rem;opacity:0.15;display:block;margin-bottom:1rem"></i>
+                <p style="color:var(--text-muted)">Select a scholar above to view and mark their attendance</p>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const user        = requireAuth(['supervisor','faculty']);
+let currentScholarId = null;
+let viewDate      = new Date();   // Which month we're viewing
+let selectedDate  = null;
+let attendanceMap = {};           // "YYYY-MM-DD" → status
+
+async function init() {
+    renderSidebar('sup-attendance.html');
+    try {
+        const svId    = user.supervisor_id;
+        const scholars= await apiGet(`/supervisor/${svId}/scholars`);
+        const pills   = document.getElementById('scholarPills');
+        if (!scholars.length) {
+            pills.innerHTML = `<div class="empty-state">No scholars assigned yet</div>`;
+            return;
+        }
+        pills.innerHTML = scholars.map((s,i) =>
+            `<button class="scholar-pill${i===0?' active':''}" onclick="selectScholar(${s.id},'${s.name}',this)">
+                ${s.name}
+            </button>`
+        ).join('');
+        selectScholar(scholars[0].id, scholars[0].name, pills.querySelector('.scholar-pill'));
+    } catch(e) { console.error(e); }
+}
+
+async function selectScholar(id, name, btn) {
+    currentScholarId = id;
+    document.querySelectorAll('.scholar-pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('attPanel').style.display   = 'block';
+    document.getElementById('noScholarMsg').style.display= 'none';
+    selectedDate = null;
+    document.getElementById('markSection').style.display = 'none';
+    document.getElementById('noDateMsg').style.display = 'block';
+    await loadMonth();
+}
+
+async function loadMonth() {
+    const month = viewDate.getMonth() + 1;
+    const year  = viewDate.getFullYear();
+    document.getElementById('monthLabel').textContent = viewDate.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+
+    try {
+        const res = await apiGet(`/attendance/${currentScholarId}?month=${month}&year=${year}`);
+        attendanceMap = {};
+        (res.records || []).forEach(r => { attendanceMap[r.date] = r.status; });
+        renderStats(res.summary || {}, res.pct || 0);
+        renderCalendar();
+    } catch(e) { console.error(e); }
+}
+
+function renderStats(s, pct) {
+    document.getElementById('stPresent').textContent = s.present || 0;
+    document.getElementById('stAbsent').textContent  = s.absent  || 0;
+    document.getElementById('stLeave').textContent   = s.leave   || 0;
+    document.getElementById('stTotal').textContent   = s.total   || 0;
+    document.getElementById('pctDisplay').textContent = pct + '%';
+    const offset = 251.2 - (pct / 100 * 251.2);
+    document.getElementById('ringProgress').style.strokeDashoffset = offset;
+}
+
+function renderCalendar() {
+    const grid     = document.getElementById('calGrid');
+    const today    = new Date();
+    const year     = viewDate.getFullYear();
+    const month    = viewDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();   // 0=Sun
+    const daysInM  = new Date(year, month+1, 0).getDate();
+
+    let cells = '';
+    // Empty cells before month starts
+    for (let i = 0; i < firstDay; i++) cells += `<div class="cal-cell empty"></div>`;
+
+    for (let d = 1; d <= daysInM; d++) {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const status  = attendanceMap[dateStr];
+        const cellDate= new Date(year, month, d);
+        const isFuture= cellDate > today;
+        const isToday = cellDate.toDateString() === today.toDateString();
+        const isSel   = dateStr === selectedDate;
+
+        const cls = [
+            'cal-cell',
+            status  || '',
+            isFuture? 'future' : '',
+            isToday ? 'today'  : '',
+            isSel   ? 'border-ring' : '',
+        ].filter(Boolean).join(' ');
+
+        const extra = isSel ? 'style="box-shadow:0 0 0 2px var(--primary);background:rgba(0,212,255,0.08)"' : '';
+
+        cells += `<div class="${cls}" ${extra} ${isFuture ? '' : `onclick="selectDay('${dateStr}', ${d})"`}  title="${dateStr}">
+                    ${d}
+                    ${status ? '<div class="dot"></div>' : ''}
+                  </div>`;
+    }
+    grid.innerHTML = cells;
+}
+
+function selectDay(dateStr, d) {
+    selectedDate = dateStr;
+    document.getElementById('selDateLabel').textContent = new Date(dateStr).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
+    document.getElementById('markSection').style.display = 'flex';
+    document.getElementById('noDateMsg').style.display = 'none';
+    renderCalendar();
+}
+
+async function markDate(status) {
+    if (!selectedDate || !currentScholarId) return;
+    // Prevent marking future dates
+    if (new Date(selectedDate) > new Date()) { toast('Cannot mark future dates','error'); return; }
+
+    try {
+        await apiPost('/attendance/', {
+            scholar_id: currentScholarId,
+            date:       selectedDate,
+            status:     status,
+            marked_by:  user.id,
+        });
+        toast(`Marked as ${status} for ${selectedDate}`);
+        await loadMonth();
+        document.getElementById('markSection').style.display = 'none';
+        document.getElementById('noDateMsg').style.display = 'block';
+        selectedDate = null;
+    } catch(e) { toast('Failed to mark attendance','error'); }
+}
+
+function changeMonth(delta) {
+    viewDate.setMonth(viewDate.getMonth() + delta);
+    // Don't allow going far into future (max current month + 1)
+    const maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 1);
+    if (viewDate > maxDate) { viewDate.setMonth(viewDate.getMonth() - delta); toast('Cannot view far future months','error'); return; }
+    loadMonth();
+}
+
+init();
+</script>
+</body>
+</html>

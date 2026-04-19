@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResearchHub — Sign In</title>
+    <meta name="description" content="Sign in to ResearchHub Academic Portal">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #060a14;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ── FULL PAGE LAYOUT ── */
+        .auth-page {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* ══════════════════════════════
+           LEFT PANEL
+        ══════════════════════════════ */
+        .auth-left {
+            flex: 0 0 60%;
+            position: relative;
+            background: linear-gradient(135deg, #060d1f 0%, #0a1628 30%, #1a0a3e 60%, #2d0b5c 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            overflow: hidden;
+        }
+
+        /* Purple + cyan glow blobs */
+        .auth-left::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(111, 0, 255, 0.35) 0%, transparent 65%);
+            pointer-events: none;
+        }
+        .auth-left::after {
+            content: '';
+            position: absolute;
+            bottom: -10%;
+            right: -5%;
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.2) 0%, transparent 65%);
+            pointer-events: none;
+        }
+
+        /* Close X button */
+        .close-x {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.7);
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: all 0.2s;
+        }
+        .close-x:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+        /* Logo box */
+        .logo-box-large {
+            width: 68px;
+            height: 68px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #00d4ff, #7b2fff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            color: #fff;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.35);
+            position: relative;
+        }
+        /* Glowing ring around logo */
+        .logo-box-large::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 22px;
+            border: 1.5px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .branding-content {
+            position: relative;
+            z-index: 2;
+            max-width: 440px;
+        }
+
+        .brand-title {
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            color: #00d4ff;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-desc {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.65);
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
+            font-weight: 400;
+        }
+
+        .feature-item {
+            display: flex;
+            gap: 1.1rem;
+            align-items: flex-start;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(0, 212, 255, 0.12);
+            border-radius: 14px;
+            padding: 1.1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .fi-icon {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            border-radius: 10px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00d4ff;
+            font-size: 0.95rem;
+        }
+
+        .fi-text strong {
+            display: block;
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.25rem;
+        }
+        .fi-text p {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.5;
+        }
+
+        /* ══════════════════════════════
+           RIGHT PANEL
+        ══════════════════════════════ */
+        .auth-right {
+            flex: 0 0 40%;
+            min-width: 0;
+            background: #08090f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 3.5rem;
+            border-left: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .auth-form-container {
+            width: 100%;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .form-header h2 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #00d4ff;
+            margin-bottom: 0.35rem;
+        }
+        .form-header p {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.45);
+        }
+
+        /* ── PORTAL TABS ── */
+        .role-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 5px;
+            margin-bottom: 2rem;
+        }
+
+        .role-tab {
+            padding: 0.75rem;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s;
+            background: transparent;
+            color: rgba(255,255,255,0.45);
+        }
+        .role-tab.active {
+            background: #fff;
+            color: #060a14;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        /* ── FORM FIELDS ── */
+        .field-label {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 0.5rem;
+            display: block;
+            font-weight: 500;
+        }
+
+        .mb-field { margin-bottom: 1.25rem; }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .forgot-link {
+            font-size: 0.82rem;
+            color: #00d4ff;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .forgot-link:hover { opacity: 0.75; }
+
+        .form-input {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 0.95rem;
+            font-family: 'Outfit', sans-serif;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-input::placeholder { color: rgba(255,255,255,0.25); }
+        .form-input:focus {
+            border-color: rgba(0, 212, 255, 0.5);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.08);
+        }
+
+        /* Password wrapper with show/hide */
+        .pass-wrapper {
+            position: relative;
+        }
+        .pass-wrapper .form-input {
+            padding-right: 3rem;
+        }
+        .toggle-pass {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.35);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: color 0.2s;
+            padding: 0;
+        }
+        .toggle-pass:hover { color: rgba(255,255,255,0.7); }
+
+        /* Error box */
+        .error-box {
+            display: none;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: #f87171;
+            margin-bottom: 1.25rem;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .error-box.show { display: flex; }
+
+        /* Success box for forgot password */
+        .success-box {
+            display: none;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: #4ade80;
+            margin-bottom: 1.25rem;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .success-box.show { display: flex; }
+
+        /* Sign In Button */
+        .btn-signin {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #00d4ff 0%, #7b2fff 100%);
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s;
+            letter-spacing: 0.3px;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-signin::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, #00e5ff, #9333ea);
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+        .btn-signin:hover::before { opacity: 1; }
+        .btn-signin span { position: relative; z-index: 1; }
+        .btn-signin:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        /* Footer link */
+        .auth-footer {
+            text-align: center;
+            font-size: 0.88rem;
+            color: rgba(255,255,255,0.4);
+        }
+        .auth-footer a {
+            color: #00d4ff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .auth-footer a:hover { text-decoration: underline; }
+
+        /* ── FORGOT PASSWORD OVERLAY ── */
+        .forgot-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .forgot-overlay.open { display: flex; }
+
+        .forgot-card {
+            background: #0d111e;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 2.5rem;
+            width: 420px;
+            text-align: center;
+        }
+        .forgot-card .ficon {
+            width: 56px; height: 56px; border-radius: 16px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; color: #00d4ff;
+            margin: 0 auto 1.5rem;
+        }
+        .forgot-card h3 {
+            font-size: 1.4rem; font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .forgot-card p {
+            font-size: 0.88rem; color: rgba(255,255,255,0.5);
+            margin-bottom: 1.75rem; line-height: 1.6;
+        }
+        .forgot-card .form-input { margin-bottom: 1rem; }
+        .forgot-card .btn-signin { font-size: 0.95rem; padding: 0.85rem; margin-bottom: 0; }
+        .btn-cancel {
+            width: 100%; padding: 0.75rem;
+            background: transparent; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px; color: rgba(255,255,255,0.5);
+            font-family: 'Outfit', sans-serif; font-size: 0.9rem;
+            cursor: pointer; transition: 0.2s; margin-top: 0.75rem;
+        }
+        .btn-cancel:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    </style>
+</head>
+<body>
+
+<div class="auth-page">
+
+    <!-- ═══ LEFT PANEL ═══ -->
+    <div class="auth-left">
+        <div class="branding-content animate-in">
+            <div class="logo-box-large"><i class="fas fa-layer-group"></i></div>
+
+            <h1 class="brand-title">Accelerate<br>Your Academic<br>Journey</h1>
+
+            <p class="brand-desc">
+                ResearchHub unifies your progress tracking, supervisor
+                collaborations, and multi-institutional data into one secure,
+                seamless platform.
+            </p>
+
+            <div class="feature-item">
+                <div class="fi-icon"><i class="fas fa-shield-halved"></i></div>
+                <div class="fi-text">
+                    <strong>Institutional Grade Security</strong>
+                    <p>Your research methodologies, manuscripts, and communications are securely end-to-end encrypted.</p>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="fi-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="fi-text">
+                    <strong>Real-time Analytics</strong>
+                    <p>Visualize progress dynamically with comprehensive dashboards bridging faculty and scholars.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ RIGHT PANEL ═══ -->
+    <div class="auth-right">
+        <div class="auth-form-container animate-in" style="animation-delay:0.1s">
+
+            <div class="form-header">
+                <h2>Sign In</h2>
+                <p>Access your research portal</p>
+            </div>
+
+            <!-- Portal Selector -->
+            <div class="role-selector" id="roleSelector">
+                <button class="role-tab active" data-role="scholar" onclick="setRole(this)">Scholar</button>
+                <button class="role-tab"        data-role="supervisor" onclick="setRole(this)">Faculty</button>
+                <button class="role-tab"        data-role="admin" onclick="setRole(this)">Admin</button>
+            </div>
+
+            <form id="loginForm" autocomplete="off" onsubmit="handleLogin(event)">
+                <!-- Email / ID -->
+                <div class="mb-field">
+                    <label class="field-label" for="emailInput">Email or Enrollment ID</label>
+                    <input type="text" id="emailInput" class="form-input"
+                           placeholder="you@university.edu or RH2024001" required autocomplete="off">
+                </div>
+
+                <!-- Password -->
+                <div class="mb-field">
+                    <div class="label-row">
+                        <label class="field-label" for="passInput" style="margin:0">Password</label>
+                        <a href="#" class="forgot-link" onclick="openForgot(event)">Forgot?</a>
+                    </div>
+                    <div class="pass-wrapper">
+                        <input type="password" id="passInput" class="form-input"
+                               placeholder="••••••••" required autocomplete="current-password">
+                        <button type="button" class="toggle-pass" id="togglePassBtn" onclick="togglePassword()">
+                            <i class="fas fa-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Error -->
+                <div class="error-box" id="loginError">
+                    <i class="fas fa-circle-xmark"></i>
+                    <span id="errorText">Invalid email/ID or password</span>
+                </div>
+
+                <button type="submit" class="btn-signin" id="loginBtn">
+                    <span>Sign In</span>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                New here? <a href="registration.html">Create an account</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ FORGOT PASSWORD OVERLAY ═══ -->
+<div class="forgot-overlay" id="forgotOverlay">
+    <div class="forgot-card">
+        <div class="ficon"><i class="fas fa-lock-open"></i></div>
+        <h3>Reset Password</h3>
+        <p>Enter your registered email address. We'll show you a reset confirmation message.</p>
+        <div id="forgotSuccess" class="success-box" style="margin-bottom:1rem">
+            <i class="fas fa-check-circle"></i>
+            <span>Password reset link sent! Check your email.</span>
+        </div>
+        <input type="email" id="forgotEmail" class="form-input" placeholder="you@university.edu">
+        <button class="btn-signin" onclick="submitForgot()"><span>Send Reset Link</span></button>
+        <button class="btn-cancel" onclick="closeForgot()">Cancel</button>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    // ── On Load: check for registered param ──
+    window.onload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('registered') === 'true') {
+            toast('Registration successful! Please sign in.', 'success');
+        }
+    };
+
+    let currentRole = 'scholar';
+    let passVisible = false;
+
+    // ── Portal selector ──
+    function setRole(btn) {
+        document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        currentRole = btn.dataset.role;
+        // Update placeholder hint
+        const ei = document.getElementById('emailInput');
+        if (currentRole === 'scholar') {
+            ei.placeholder = 'you@university.edu or RH2024001';
+        } else {
+            ei.placeholder = 'you@university.edu';
+        }
+    }
+
+    // ── Show / Hide Password ──
+    function togglePassword() {
+        passVisible = !passVisible;
+        const inp = document.getElementById('passInput');
+        const icon = document.getElementById('eyeIcon');
+        inp.type = passVisible ? 'text' : 'password';
+        icon.className = passVisible ? 'fas fa-eye-slash' : 'fas fa-eye';
+    }
+
+    // ── Login Handler ──
+    async function handleLogin(e) {
+        e.preventDefault();
+        const btn = document.getElementById('loginBtn');
+        const errBox = document.getElementById('loginError');
+        errBox.classList.remove('show');
+        btn.disabled = true;
+        btn.innerHTML = '<span><i class="fas fa-circle-notch fa-spin"></i> Authenticating...</span>';
+
+        try {
+            const res = await apiPost('/auth/login', {
+                email   : document.getElementById('emailInput').value.trim(),
+                password: document.getElementById('passInput').value,
+                role    : currentRole,
+            });
+
+            // Store under key 'rh_user' — this is what api.js requireAuth() reads
+            localStorage.setItem('rh_user', JSON.stringify(res));
+
+            if (res.role === 'admin') {
+                window.location.href = 'admin-dashboard.html';
+            } else if (res.role === 'faculty' || res.role === 'supervisor') {
+                window.location.href = 'supervisor-dashboard.html';
+            } else {
+                window.location.href = 'scholar-dashboard.html';
+            }
+
+        } catch (err) {
+            document.getElementById('errorText').textContent = err.error || 'Invalid email/ID or password. Please try again.';
+            errBox.classList.add('show');
+            btn.disabled = false;
+            btn.innerHTML = '<span>Sign In</span>';
+        }
+    }
+
+    // ── Forgot Password ──
+    function openForgot(e) {
+        e.preventDefault();
+        document.getElementById('forgotEmail').value = document.getElementById('emailInput').value;
+        document.getElementById('forgotSuccess').style.display = 'none';
+        document.getElementById('forgotOverlay').classList.add('open');
+    }
+    function closeForgot() {
+        document.getElementById('forgotOverlay').classList.remove('open');
+    }
+    async function submitForgot() {
+        const email = document.getElementById('forgotEmail').value.trim();
+        if (!email) { alert('Please enter your email address.'); return; }
+        
+        const btn = document.querySelector('#forgotOverlay .btn-signin');
+        const oldText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span><i class="fas fa-circle-notch fa-spin"></i> Processing...</span>';
+
+        // Simulate network delay for "alive" feel
+        await new Promise(r => setTimeout(r, 1500));
+        
+        const successBox = document.getElementById('forgotSuccess');
+        successBox.style.display = 'flex';
+        btn.innerHTML = oldText;
+        btn.disabled = false;
+        
+        setTimeout(closeForgot, 3000);
+    }
+
+    // Close overlay on background click
+    document.getElementById('forgotOverlay').addEventListener('click', function(e) {
+        if (e.target === this) closeForgot();
+    });
+</script>
+</body>
+</html>

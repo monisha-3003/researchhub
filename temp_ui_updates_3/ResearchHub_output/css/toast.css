@@ -1,0 +1,16 @@
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 0.85rem 1.5rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    z-index: 9999;
+    animation: toastIn 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+.toast-success { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); color: #22c55e; }
+.toast-error   { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.4);  color: #ef4444; }
+@keyframes toastIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }

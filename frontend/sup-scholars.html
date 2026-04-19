@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ResearchHub — My Scholars</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/toast.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Filter bar */
+    .filter-bar { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; }
+    .filter-pill {
+      padding:0.42rem 1.1rem; border-radius:20px; font-size:0.82rem; font-weight:500;
+      border:1px solid var(--glass-border); background:transparent; color:var(--text-muted);
+      cursor:pointer; transition:all 0.2s;
+    }
+    .filter-pill.active { background:#fff; color:#000; border-color:#fff; font-weight:700; }
+    .filter-pill:not(.active):hover { border-color:var(--primary); color:var(--primary); }
+    .search-box {
+      margin-left:auto; display:flex; align-items:center; gap:0.5rem;
+      background:var(--glass); border:1px solid var(--glass-border); border-radius:10px;
+      padding:0.4rem 0.9rem;
+    }
+    .search-box input { background:transparent; border:none; outline:none; color:#fff; font-size:0.85rem; width:160px; font-family:inherit; }
+    .search-box input::placeholder { color:var(--text-muted); }
+
+    /* Scholar card grid */
+    .scholar-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.2rem; }
+    @media(max-width:1000px) { .scholar-grid { grid-template-columns:1fr 1fr; } }
+
+    .scard {
+      background:var(--glass); border:1px solid var(--glass-border);
+      border-radius:14px; padding:1.4rem; transition:border-color 0.2s;
+    }
+    .scard:hover { border-color:rgba(255,255,255,0.18); }
+
+    .scard-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:0.85rem; }
+    .scard-left { display:flex; gap:0.85rem; align-items:center; }
+    .scard-avatar {
+      width:42px; height:42px; border-radius:50%;
+      background:linear-gradient(135deg,#6366f1,#7c3aed);
+      color:#fff; font-size:0.85rem; font-weight:700;
+      display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .scard-name { font-size:0.95rem; font-weight:700; color:#fff; }
+    .scard-sub  { font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem; }
+    .scard-status { font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:10px; }
+    .st-ontrack  { background:rgba(34,197,94,0.12);  color:#22c55e; }
+    .st-due      { background:rgba(245,158,11,0.12); color:#f59e0b; }
+    .st-overdue  { background:rgba(239,68,68,0.12);  color:#ef4444; }
+
+    .scard-meta { display:flex; gap:1.5rem; font-size:0.73rem; color:var(--text-muted); margin-bottom:0.75rem; }
+    .scard-meta span strong { color:rgba(255,255,255,0.8); font-weight:600; }
+
+    .scard-progress { display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem; }
+    .scard-progress span { font-size:0.75rem; color:var(--text-muted); white-space:nowrap; }
+    .prog-track { flex:1; height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; }
+    .prog-fill  { height:100%; border-radius:999px; }
+
+    .scard-actions { display:flex; gap:0.5rem; border-top:1px solid var(--glass-border); padding-top:0.9rem; }
+    .btn-sact {
+      flex:1; text-align:center; font-size:0.75rem; font-weight:600;
+      padding:0.4rem; border-radius:8px; border:1px solid var(--glass-border);
+      background:transparent; color:var(--text-muted); cursor:pointer; transition:all 0.2s;
+    }
+    .btn-sact:hover { border-color:var(--primary); color:var(--primary); }
+
+    /* Badge on stat card */
+    .stat-sb { display:inline-block; margin-top:0.4rem; padding:2px 10px; border-radius:20px; font-size:0.72rem; font-weight:600; }
+    .sb-green  { background:rgba(34,197,94,0.12); color:#22c55e; }
+    .sb-yellow { background:rgba(245,158,11,0.12); color:#f59e0b; }
+    .sb-blue   { background:rgba(99,102,241,0.12); color:#a5b4fc; }
+    .sb-red    { background:rgba(239,68,68,0.12);  color:#ef4444; }
+
+    /* Stat card override for sup-scholars */
+    .stat-card {
+        background: var(--card-dark, rgba(30,41,59,0.5));
+        border: 1px solid var(--glass-border);
+        border-radius: 16px; padding: 1.25rem;
+        display: flex; flex-direction: column;
+    }
+    .stat-icon { font-size: 1.6rem; color: var(--primary); margin-bottom: 0.75rem; }
+    .stat-value { font-size: 1.8rem; font-weight: 700; color: #fff; margin-bottom: 0.15rem; }
+    .stat-label { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div id="sidebar-container"></div>
+  <main class="main-wrapper">
+    <div class="content-body animate-in">
+      <div class="page-header">
+      <h1>My scholars</h1>
+      <p class="page-sub">Track progress, view profiles and manage all your assigned scholars</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" style="margin-bottom:1.5rem">
+      <div class="stat-card">
+        <div class="stat-icon"><i class="fas fa-user-graduate"></i></div>
+        <div class="stat-value" id="statTotal">—</div>
+        <div class="stat-label">Total scholars</div>
+        <div><span class="stat-sb sb-green" id="statActive">—</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="color:#22c55e"><i class="fas fa-chart-line"></i></div>
+        <div class="stat-value" id="statAvg">—</div>
+        <div class="stat-label">Avg. progress</div>
+        <div><span class="stat-sb sb-green">Live data</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="color:#f59e0b"><i class="fas fa-clock"></i></div>
+        <div class="stat-value" id="statSubmitted">—</div>
+        <div class="stat-label">Submitted thesis</div>
+        <div><span class="stat-sb sb-blue">Completed</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="color:#ef4444"><i class="fas fa-exclamation-circle"></i></div>
+        <div class="stat-value" id="statOverdue">—</div>
+        <div class="stat-label">Overdue</div>
+        <div><span class="stat-sb sb-red" id="statOverdueLabel">—</span></div>
+      </div>
+    </div>
+
+    <!-- ─── Pending Student Requests ─── -->
+    <div class="pending-requests-card" id="pendingRequestsCard" style="display:none;">
+      <div class="prc-header">
+        <h3><i class="fas fa-user-clock"></i> Pending Student Requests</h3>
+        <span class="prc-count" id="prcCount">0 pending</span>
+      </div>
+      <div id="pendingRequestsList">
+        <div class="prc-loading"><i class="fas fa-spinner fa-spin"></i> Loading requests…</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <button class="filter-pill active" onclick="filterScholars('all',this)">All</button>
+      <button class="filter-pill" onclick="filterScholars('ontrack',this)">On track</button>
+      <button class="filter-pill" onclick="filterScholars('overdue',this)">Overdue</button>
+      <button class="filter-pill" onclick="filterScholars('submitted',this)">Submitted</button>
+      <div class="search-box">
+        <i class="fas fa-search" style="color:var(--text-muted);font-size:0.8rem"></i>
+        <input type="text" placeholder="Search scholars…" id="searchInput" oninput="searchScholars(this.value)">
+      </div>
+    </div>
+
+    <!-- Scholar cards -->
+    <div class="scholar-grid" id="scholarGrid"></div>
+    </div>
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const user = requireAuth('faculty');
+
+  let ALL_SCHOLARS = [];
+  let currentFilter = 'all';
+  let searchVal = '';
+
+  if (user) { 
+    renderSidebar('sup-scholars.html'); 
+    loadPendingBadge(); 
+    loadScholars();
+    loadSupervisorRequests();
+  }
+
+  async function loadSupervisorRequests() {
+    const svId = await resolveSupervisorId();
+    const card = document.getElementById('pendingRequestsCard');
+    const list = document.getElementById('pendingRequestsList');
+    const countEl = document.getElementById('prcCount');
+    if (!svId) {
+      list.innerHTML = `<div class="prc-empty"><i class="fas fa-inbox"></i>No supervisor profile linked.</div>`;
+      return;
+    }
+    try {
+      let requests = [];
+      let isDemoMode = false;
+      try {
+        requests = await apiGet(`/supervisor/${svId}/supervisor-requests`);
+      } catch (e) {
+        requests = getDemoRequests();
+        isDemoMode = true;
+      }
+      
+      if (!requests.length) {
+        card.style.display = 'none';
+        return;
+      }
+      
+      card.style.display = 'block';
+      countEl.textContent = `${requests.length} pending`;
+      
+      list.innerHTML = (isDemoMode ? `<div style="background:rgba(245,158,11,0.1);color:#f59e0b;padding:0.75rem;border-radius:8px;font-size:0.85rem;margin-bottom:1rem;border:1px solid rgba(245,158,11,0.2);"><i class="fas fa-info-circle"></i> Showing demo requests (Backend unreachable)</div>` : '') +
+        requests.map(r => {
+        const initials = (r.scholar_name || 'S').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        return `
+        <div class="request-item" id="req-${r.id}">
+          <div class="request-avatar">${initials}</div>
+          <div class="request-info">
+            <div class="request-name">${r.scholar_name || 'Unknown Scholar'}</div>
+            <div class="request-meta">${r.department || ''} · Requested ${r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) : ''}</div>
+          </div>
+          <div class="request-actions">
+            <button class="accept-btn" onclick="handleRequest(${r.id}, 'accept')"><i class="fas fa-check"></i> Accept</button>
+            <button class="reject-btn" onclick="handleRequest(${r.id}, 'reject')"><i class="fas fa-times"></i> Reject</button>
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      card.style.display = 'block';
+      list.innerHTML = `<div class="prc-empty"><i class="fas fa-exclamation-triangle"></i>Failed to load requests.</div>`;
+      console.error(e);
+    }
+  }
+
+  async function handleRequest(requestId, action) {
+    try {
+      await apiPut(`/supervisor/supervisor-requests/${requestId}/respond`, { status: action === 'accept' ? 'accepted' : 'rejected' });
+      const el = document.getElementById(`req-${requestId}`);
+      if (el) {
+        el.style.transition = 'all 0.35s ease';
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(20px)';
+        setTimeout(() => { el.remove(); recount(); }, 360);
+      }
+      toast(action === 'accept' ? 'Request accepted successfully' : 'Request rejected', action === 'accept' ? 'success' : 'info');
+    } catch(e) {
+      toast('Failed to update request', 'error');
+    }
+  }
+
+  function recount() {
+    const remaining = document.querySelectorAll('.request-item').length;
+    document.getElementById('prcCount').textContent = `${remaining} pending`;
+    if (!remaining) {
+      document.getElementById('pendingRequestsCard').style.display = 'none';
+      document.getElementById('pendingRequestsList').innerHTML = `<div class="prc-empty"><i class="fas fa-check-circle"></i>No pending student requests.</div>`;
+    }
+  }
+
+  async function resolveSupervisorId() {
+    if (user.supervisor_id) return user.supervisor_id;
+    try {
+      const svs = await apiGet('/supervisor/all');
+      const mine = svs.find(s => s.user_id == user.id || s.id == user.id);
+      if (mine) {
+        user.supervisor_id = mine.id || mine.user_id;
+        localStorage.setItem('user', JSON.stringify(user));
+        return user.supervisor_id;
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  function getDemoRequests() {
+      return [
+          { id: 901, scholar_name: 'Aditi Sharma', department: 'Computer Science', created_at: new Date().toISOString() },
+          { id: 902, scholar_name: 'Rohan Gupta', department: 'Electrical Engineering', created_at: new Date(Date.now() - 86400000).toISOString() },
+          { id: 903, scholar_name: 'Megha Iyer', department: 'Data Science', created_at: new Date(Date.now() - 172800000).toISOString() }
+      ];
+  }
+
+  async function loadScholars() {
+    try {
+      const svId = await resolveSupervisorId();
+      if (!svId) {
+        document.getElementById('scholarGrid').innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>No supervisor profile linked. Please contact admin.</p></div>`;
+        return;
+      }
+      ALL_SCHOLARS = await apiGet(`/supervisor/${svId}/scholars`);
+
+      // Update stat cards with real data
+      const total     = ALL_SCHOLARS.length;
+      const submitted = ALL_SCHOLARS.filter(s => s.thesis_stage === 'submitted' || s.thesis_stage === 'completed').length;
+      const overdue   = ALL_SCHOLARS.filter(s => (s.progress_pct || 0) < 20 && s.thesis_stage !== 'completed').length;
+      const avgProg   = total ? Math.round(ALL_SCHOLARS.reduce((a, s) => a + (s.progress_pct || 0), 0) / total) : 0;
+
+      document.getElementById('statTotal').textContent     = total;
+      document.getElementById('statActive').textContent    = `${total} active`;
+      document.getElementById('statAvg').textContent       = `${avgProg}%`;
+      document.getElementById('statSubmitted').textContent = submitted;
+      document.getElementById('statOverdue').textContent   = overdue;
+      document.getElementById('statOverdueLabel').textContent = overdue > 0 ? 'Needs attention' : 'All on track';
+
+      renderScholars();
+    } catch(e) { console.error('loadScholars error:', e); }
+  }
+
+  function filterScholars(f, btn) {
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = f;
+    renderScholars();
+  }
+
+  function searchScholars(val) { searchVal = val.toLowerCase(); renderScholars(); }
+
+  function renderScholars() {
+    let data = ALL_SCHOLARS;
+    if (currentFilter !== 'all') {
+      data = data.filter(s => {
+        const pct = s.progress_pct || 0;
+        if (currentFilter === 'ontrack')   return pct >= 40;
+        if (currentFilter === 'overdue')   return pct < 20;
+        if (currentFilter === 'submitted') return s.thesis_stage === 'submitted' || s.thesis_stage === 'completed';
+        return true;
+      });
+    }
+    if (searchVal) data = data.filter(s => (s.name||'').toLowerCase().includes(searchVal));
+    
+    const grid = document.getElementById('scholarGrid');
+    if (!data.length) { grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>No scholars found.</p></div>`; return; }
+
+    grid.innerHTML = data.map(s => {
+      const initials  = s.name ? s.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() : 'S';
+      const pct       = s.progress_pct || 0;
+      const progColor = pct >= 60 ? '#22c55e' : pct >= 30 ? '#f59e0b' : '#ef4444';
+      const stage     = s.thesis_stage || 'Coursework';
+      const statusCls = pct >= 40 ? 'st-ontrack' : pct < 20 ? 'st-overdue' : 'st-due';
+      const statusLbl = pct >= 40 ? 'On Track' : pct < 20 ? 'Overdue' : 'At Risk';
+      const doneMil   = s.milestones_done || 0;
+      const totalMil  = s.milestones_total || 0;
+      // Safe user_id — fallback to s.id (scholar profile id) if user_id is missing
+      const profileId = s.user_id || s.id;
+
+      return `
+      <div class="scard">
+        <div class="scard-top">
+          <div class="scard-left">
+            <div class="scard-avatar">${initials}</div>
+            <div>
+              <div class="scard-name">${s.name || 'Scholar'}</div>
+              <div class="scard-sub">${s.department || 'N/A'} · ${s.research_area || 'General Research'}</div>
+            </div>
+          </div>
+          <span class="scard-status ${statusCls}">${statusLbl}</span>
+        </div>
+        <div class="scard-meta">
+          <span>Enrolled <strong>${s.enroll_year || '—'}</strong></span>
+          <span>Stage <strong>${stage}</strong></span>
+          <span>Milestones <strong>${doneMil}/${totalMil}</strong></span>
+        </div>
+        <div class="scard-progress">
+          <span>${pct}%</span>
+          <div class="prog-track">
+            <div class="prog-fill" style="width:${pct}%;background:${progColor}"></div>
+          </div>
+          <span style="color:var(--text-muted);font-size:0.7rem">${stage}</span>
+        </div>
+        <div class="scard-actions">
+          <button class="btn-sact" onclick="window.location.href='view-profile.html?id=${profileId}'">
+            <i class="fas fa-user" style="margin-right:0.3rem"></i>View Profile
+          </button>
+          <button class="btn-sact" onclick="window.location.href='messages.html?contact_id=${profileId}'">
+            <i class="fas fa-comment" style="margin-right:0.3rem"></i>Message
+          </button>
+        </div>
+      </div>`
+    }).join('');
+  }
+
+</script>
+</body>
+</html>

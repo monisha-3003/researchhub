@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .tab-bar { display:flex; gap:0.25rem; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:12px; padding:5px; margin-bottom:2rem; }
+        .tab-btn { flex:1; padding:0.7rem 1rem; border:none; border-radius:9px; font-family:'Outfit',sans-serif; font-size:0.9rem; font-weight:500; cursor:pointer; background:transparent; color:rgba(255,255,255,0.45); transition:all 0.2s; }
+        .tab-btn.active { background:#fff; color:#060a14; font-weight:700; box-shadow:0 4px 15px rgba(0,0,0,0.25); }
+        .tab-panel { display:none; } .tab-panel.active { display:block; }
+
+        .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
+        .field-full  { grid-column:1/-1; }
+
+        .fld { display:flex; flex-direction:column; gap:0.4rem; }
+        .fld label { font-size:0.82rem; font-weight:600; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:0.4px; }
+        .fld input, .fld select, .fld textarea {
+            background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+            border-radius:10px; color:#fff; font-size:0.95rem; font-family:'Outfit',sans-serif;
+            padding:0.85rem 1rem; outline:none; transition:border-color 0.2s, box-shadow 0.2s; width:100%;
+        }
+        .fld input:focus, .fld select, .fld textarea:focus { border-color:rgba(0,212,255,0.5); box-shadow:0 0 0 3px rgba(0,212,255,0.07); }
+        .fld input[disabled], .fld select[disabled] { opacity:0.45; cursor:not-allowed; }
+        .fld .err-msg { font-size:0.78rem; color:#f87171; display:none; margin-top:0.15rem; }
+        .fld.has-error input, .fld.has-error select, .fld.has-error textarea { border-color:#ef4444; }
+        .fld.has-error .err-msg { display:block; }
+
+        .avatar-huge { width:96px; height:96px; min-width:96px; border-radius:50%; background:linear-gradient(135deg,#00d4ff,#7b2fff); display:flex; align-items:center; justify-content:center; font-size:2.25rem; font-weight:800; color:#fff; }
+        .save-btn { background:linear-gradient(90deg,#00d4ff,#7b2fff); border:none; border-radius:12px; color:#fff; font-family:'Outfit',sans-serif; font-weight:700; font-size:0.95rem; padding:0.9rem 2.5rem; cursor:pointer; transition:opacity 0.2s; }
+        .save-btn:hover { opacity:0.88; }
+        .save-btn:disabled { opacity:0.5; cursor:not-allowed; }
+        .divider { height:1px; background:var(--border); margin:2rem 0; }
+        .pass-wrap { position:relative; }
+        .pass-wrap input { padding-right:3rem; }
+        .pass-eye { position:absolute; right:1rem; top:50%; transform:translateY(-50%); background:none; border:none; color:rgba(255,255,255,0.3); cursor:pointer; font-size:0.95rem; }
+        .pass-eye:hover { color:rgba(255,255,255,0.7); }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body animate-in">
+
+            <!-- Header -->
+            <div class="header-row" style="margin-bottom:2rem">
+                <div>
+                    <h1>My Profile</h1>
+                    <p>Manage your personal and academic details</p>
+                </div>
+                <div id="saveStatus" style="font-size:0.85rem;color:#4ade80;display:none">
+                    <i class="fas fa-check-circle"></i> Saved successfully
+                </div>
+            </div>
+
+            <!-- Avatar Ribbon -->
+            <div class="panel" style="display:flex;align-items:center;gap:2rem;margin-bottom:2rem;flex-wrap:wrap">
+                <div class="avatar-huge" id="avatarBig">PK</div>
+                <div>
+                    <div style="font-size:1.6rem;font-weight:800" id="nameDisplay">Loading...</div>
+                    <div style="color:var(--primary);font-size:0.88rem;font-weight:600;margin:0.25rem 0" id="roleDisplay">Research Scholar</div>
+                    <div style="color:var(--text-muted);font-size:0.85rem" id="emailDisplay">—</div>
+                </div>
+                <div style="margin-left:auto;text-align:right">
+                    <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.25rem">Enrollment ID</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:var(--primary)" id="enrollIdDisplay">—</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="switchTab('personal',this)"><i class="fas fa-user" style="margin-right:0.5rem"></i>Personal Details</button>
+                <button class="tab-btn" onclick="switchTab('academic',this)"><i class="fas fa-graduation-cap" style="margin-right:0.5rem"></i>Academic Details</button>
+                <button class="tab-btn" onclick="switchTab('password',this)"><i class="fas fa-lock" style="margin-right:0.5rem"></i>Change Password</button>
+            </div>
+
+            <!-- ── TAB 1: PERSONAL ── -->
+            <div class="tab-panel active" id="tab-personal">
+                <div class="panel">
+                    <div class="field-grid">
+                        <div class="fld" id="fld-firstName">
+                            <label>First Name *</label>
+                            <input type="text" id="firstName" placeholder="e.g. Prem" maxlength="50"
+                                   oninput="validateName('firstName','fld-firstName')">
+                            <span class="err-msg">Name must be 2–50 letters only (no numbers or symbols)</span>
+                        </div>
+                        <div class="fld" id="fld-lastName">
+                            <label>Last Name *</label>
+                            <input type="text" id="lastName" placeholder="e.g. Kumar" maxlength="50"
+                                   oninput="validateName('lastName','fld-lastName')">
+                            <span class="err-msg">Name must be 2–50 letters only (no numbers or symbols)</span>
+                        </div>
+                        <div class="fld" id="fld-dob">
+                            <label>Date of Birth *</label>
+                            <input type="date" id="dob" onchange="validateDOB()">
+                            <span class="err-msg">You must be at least 16 years old</span>
+                        </div>
+                        <div class="fld">
+                            <label>Gender</label>
+                            <select id="gender">
+                                <option value="">-- Select --</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Non-binary">Non-binary</option>
+                                <option value="Prefer not to say">Prefer not to say</option>
+                            </select>
+                        </div>
+                        <div class="fld" id="fld-phone">
+                            <label>Phone Number *</label>
+                            <input type="tel" id="phone" placeholder="10-digit number" maxlength="10"
+                                   oninput="this.value=this.value.replace(/\D/g,''); validatePhone()">
+                            <span class="err-msg">Enter a valid 10-digit mobile number</span>
+                        </div>
+                        <div class="fld">
+                            <label>Email (read-only)</label>
+                            <input type="email" id="email" disabled>
+                        </div>
+                        <div class="fld field-full">
+                            <label>Home Address</label>
+                            <textarea id="address" rows="3" placeholder="Your full home/hostel address..."></textarea>
+                        </div>
+                    </div>
+                    <div style="margin-top:1.75rem;display:flex;justify-content:flex-end">
+                        <button class="save-btn" onclick="savePersonal()" id="savePersonalBtn">
+                            <i class="fas fa-save" style="margin-right:0.5rem"></i>Save Personal Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── TAB 2: ACADEMIC ── -->
+            <div class="tab-panel" id="tab-academic">
+                <div class="panel">
+                    <div class="field-grid">
+                        <div class="fld">
+                            <label>Enrollment ID (read-only)</label>
+                            <input type="text" id="enrollId" disabled>
+                        </div>
+                        <div class="fld">
+                            <label>Enrollment Year (read-only)</label>
+                            <input type="text" id="enrollYear" disabled>
+                        </div>
+                        <div class="fld" id="fld-dept">
+                            <label>Department *</label>
+                            <input type="text" id="department" placeholder="e.g. Computer Science" maxlength="100"
+                                   oninput="validateRequired('department','fld-dept','Department is required')">
+                            <span class="err-msg">Department is required</span>
+                        </div>
+                        <div class="fld">
+                            <label>University / Institution</label>
+                            <input type="text" id="university" placeholder="e.g. Anna University" maxlength="150">
+                        </div>
+                        <div class="fld">
+                            <label>Batch / Cohort Year</label>
+                            <select id="batchYear">
+                                <option value="">-- Select Batch --</option>
+                            </select>
+                        </div>
+                        <div class="fld">
+                            <label>Fellowship Type</label>
+                            <select id="fellowship">
+                                <option value="">-- None --</option>
+                                <option value="JRF">JRF — Junior Research Fellowship</option>
+                                <option value="SRF">SRF — Senior Research Fellowship</option>
+                                <option value="UGC">UGC Fellowship</option>
+                                <option value="DST">DST Fellowship</option>
+                                <option value="CSIR">CSIR Fellowship</option>
+                                <option value="Institute">Institute Fellowship</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="fld">
+                            <label>Thesis Stage</label>
+                            <select id="thesisStage">
+                                <option value="Coursework">Coursework</option>
+                                <option value="Proposal">Proposal</option>
+                                <option value="Synopsis">Synopsis</option>
+                                <option value="Seminar">Pre-submission Seminar</option>
+                                <option value="Submission">Thesis Submission</option>
+                            </select>
+                        </div>
+                        <div class="fld">
+                            <label>Supervisor (read-only)</label>
+                            <input type="text" id="supervisorName" disabled placeholder="Not assigned yet">
+                        </div>
+                        <div class="fld field-full" id="fld-research">
+                            <label>Research Area / Specialization *</label>
+                            <textarea id="researchArea" rows="3" placeholder="e.g. Deep Learning, NLP, Computer Vision..."
+                                      oninput="validateResearch()"></textarea>
+                            <span class="err-msg">Please describe your research area (min 10 characters)</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:1.75rem;display:flex;justify-content:flex-end">
+                        <button class="save-btn" onclick="saveAcademic()" id="saveAcademicBtn">
+                            <i class="fas fa-save" style="margin-right:0.5rem"></i>Save Academic Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── TAB 3: CHANGE PASSWORD ── -->
+            <div class="tab-panel" id="tab-password">
+                <div class="panel" style="max-width:520px">
+                    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1.5rem">Change Your Password</h3>
+
+                    <div class="fld" id="fld-oldPass" style="margin-bottom:1.25rem">
+                        <label>Current Password *</label>
+                        <div class="pass-wrap">
+                            <input type="password" id="oldPass" placeholder="Your current password" oninput="clearPassErr()">
+                            <button type="button" class="pass-eye" onclick="toggleEye('oldPass','eyeOld')"><i class="fas fa-eye" id="eyeOld"></i></button>
+                        </div>
+                        <span class="err-msg">Current password is required</span>
+                    </div>
+
+                    <div class="fld" id="fld-newPass" style="margin-bottom:1.25rem">
+                        <label>New Password *</label>
+                        <div class="pass-wrap">
+                            <input type="password" id="newPass" placeholder="At least 8 characters" oninput="validateNewPass()">
+                            <button type="button" class="pass-eye" onclick="toggleEye('newPass','eyeNew')"><i class="fas fa-eye" id="eyeNew"></i></button>
+                        </div>
+                        <span class="err-msg" id="newPassErr">Min 8 characters, at least 1 number & 1 letter</span>
+                        <!-- Strength bar -->
+                        <div id="strengthBar" style="height:4px;border-radius:4px;background:var(--border);margin-top:0.5rem;overflow:hidden" >
+                            <div id="strengthFill" style="height:100%;width:0%;transition:all 0.3s;border-radius:4px"></div>
+                        </div>
+                        <div id="strengthLabel" style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem"></div>
+                    </div>
+
+                    <div class="fld" id="fld-confirmPass" style="margin-bottom:1.75rem">
+                        <label>Confirm New Password *</label>
+                        <div class="pass-wrap">
+                            <input type="password" id="confirmPass" placeholder="Repeat new password" oninput="validateConfirm()">
+                            <button type="button" class="pass-eye" onclick="toggleEye('confirmPass','eyeConf')"><i class="fas fa-eye" id="eyeConf"></i></button>
+                        </div>
+                        <span class="err-msg">Passwords do not match</span>
+                    </div>
+
+                    <div id="passResult" style="font-size:0.85rem;margin-bottom:1rem;display:none"></div>
+
+                    <button class="save-btn" onclick="changePassword()" id="changePassBtn">
+                        <i class="fas fa-key" style="margin-right:0.5rem"></i>Update Password
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const user = requireAuth('scholar');
+let scholarId = null;
+
+// ── Init ──────────────────────────────────────────────────────────────
+async function init() {
+    renderSidebar('profile.html');
+
+    // Populate batch year options (2015 → current year)
+    const sy = document.getElementById('batchYear');
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear; y >= 2015; y--) {
+        sy.innerHTML += `<option value="${y}">${y}</option>`;
+    }
+
+    // Set DOB max (today - 16 years)
+    const maxDob = new Date();
+    maxDob.setFullYear(maxDob.getFullYear() - 16);
+    document.getElementById('dob').max = maxDob.toISOString().split('T')[0];
+    // Min DOB = 60 years ago
+    const minDob = new Date();
+    minDob.setFullYear(minDob.getFullYear() - 60);
+    document.getElementById('dob').min = minDob.toISOString().split('T')[0];
+
+    try {
+        const s = await apiGet(`/scholar/${user.scholar_id || user.id}`);
+        scholarId = s.id;
+
+        // Header ribbon
+        const name = `${s.first_name} ${s.last_name}`.trim();
+        document.getElementById('nameDisplay').textContent  = name;
+        document.getElementById('emailDisplay').textContent = s.email || '—';
+        document.getElementById('enrollIdDisplay').textContent = s.enrollment_id || '—';
+        document.getElementById('avatarBig').textContent    = (s.first_name?.[0] || '') + (s.last_name?.[0] || '');
+
+        // Personal tab
+        document.getElementById('firstName').value = s.first_name || '';
+        document.getElementById('lastName').value  = s.last_name  || '';
+        document.getElementById('dob').value       = s.dob        || '';
+        document.getElementById('gender').value    = s.gender     || '';
+        document.getElementById('phone').value     = s.phone      || '';
+        document.getElementById('email').value     = s.email      || '';
+        document.getElementById('address').value   = s.address    || '';
+
+        // Academic tab
+        document.getElementById('enrollId').value      = s.enrollment_id || '';
+        document.getElementById('enrollYear').value    = s.enroll_year   || '';
+        document.getElementById('department').value    = s.department    || '';
+        document.getElementById('university').value    = s.university    || '';
+        document.getElementById('fellowship').value    = s.fellowship    || '';
+        document.getElementById('thesisStage').value  = s.thesis_stage  || 'Coursework';
+        document.getElementById('researchArea').value  = s.research_area || '';
+        document.getElementById('supervisorName').value = s.supervisor_name || 'Not assigned';
+        if (s.enroll_year) document.getElementById('batchYear').value = s.enroll_year;
+
+    } catch(e) { console.error(e); toast('Failed to load profile', 'error'); }
+}
+
+// ── Tab switch ────────────────────────────────────────────────────────
+function switchTab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    btn.classList.add('active');
+}
+
+// ── Validation helpers ────────────────────────────────────────────────
+function setError(fldId, show) {
+    const el = document.getElementById(fldId);
+    el.classList.toggle('has-error', show);
+    return !show;
+}
+
+function validateName(inputId, fldId) {
+    const val = document.getElementById(inputId).value.trim();
+    const ok = /^[a-zA-Z\s'-]{2,50}$/.test(val);
+    setError(fldId, !ok);
+    return ok;
+}
+
+function validateDOB() {
+    const val = document.getElementById('dob').value;
+    if (!val) { setError('fld-dob', true); return false; }
+    const age = (new Date() - new Date(val)) / (365.25 * 24 * 3600 * 1000);
+    const ok  = age >= 16;
+    setError('fld-dob', !ok);
+    return ok;
+}
+
+function validatePhone() {
+    const val = document.getElementById('phone').value;
+    const ok  = /^\d{10}$/.test(val);
+    setError('fld-phone', !ok);
+    return ok;
+}
+
+function validateRequired(inputId, fldId, msg) {
+    const val = document.getElementById(inputId).value.trim();
+    setError(fldId, !val);
+    return !!val;
+}
+
+function validateResearch() {
+    const val = document.getElementById('researchArea').value.trim();
+    const ok  = val.length >= 10;
+    setError('fld-research', !ok);
+    return ok;
+}
+
+// Password show/hide
+function toggleEye(inputId, iconId) {
+    const inp  = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    inp.type   = inp.type === 'password' ? 'text' : 'password';
+    icon.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+}
+
+// Password strength
+function validateNewPass() {
+    const val  = document.getElementById('newPass').value;
+    const fbar = document.getElementById('strengthFill');
+    const flbl = document.getElementById('strengthLabel');
+    let score  = 0;
+    if (val.length >= 8)               score++;
+    if (/[0-9]/.test(val))             score++;
+    if (/[a-zA-Z]/.test(val))          score++;
+    if (/[^a-zA-Z0-9]/.test(val))      score++;
+    if (val.length >= 12)              score++;
+    const colors  = ['#ef4444','#f59e0b','#f59e0b','#22c55e','#00d4ff'];
+    const labels  = ['Very Weak','Weak','Fair','Strong','Very Strong'];
+    fbar.style.width     = `${score * 20}%`;
+    fbar.style.background = colors[score - 1] || 'var(--border)';
+    flbl.textContent      = score > 0 ? labels[score - 1] : '';
+    const ok = val.length >= 8 && /[0-9]/.test(val) && /[a-zA-Z]/.test(val);
+    document.getElementById('newPassErr').textContent = ok ? '' : 'Min 8 chars, at least 1 letter & 1 number';
+    setError('fld-newPass', !ok);
+    return ok;
+}
+
+function validateConfirm() {
+    const np = document.getElementById('newPass').value;
+    const cp = document.getElementById('confirmPass').value;
+    const ok = cp === np && cp !== '';
+    setError('fld-confirmPass', !ok);
+    return ok;
+}
+
+function clearPassErr() { setError('fld-oldPass', false); }
+
+// ── Save Personal ─────────────────────────────────────────────────────
+async function savePersonal() {
+    const v1 = validateName('firstName','fld-firstName');
+    const v2 = validateName('lastName','fld-lastName');
+    const v3 = validateDOB();
+    const v4 = validatePhone();
+    if (!v1 || !v2 || !v3 || !v4) { toast('Please fix the errors above', 'error'); return; }
+
+    const btn = document.getElementById('savePersonalBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    try {
+        await apiPut(`/scholar/profile/${scholarId}`, {
+            first_name : document.getElementById('firstName').value.trim(),
+            last_name  : document.getElementById('lastName').value.trim(),
+            dob        : document.getElementById('dob').value,
+            gender     : document.getElementById('gender').value,
+            phone      : document.getElementById('phone').value,
+            address    : document.getElementById('address').value.trim(),
+        });
+        toast('Personal details saved!');
+        // refresh header
+        const fn = document.getElementById('firstName').value.trim();
+        const ln = document.getElementById('lastName').value.trim();
+        document.getElementById('nameDisplay').textContent = `${fn} ${ln}`;
+        document.getElementById('avatarBig').textContent = (fn[0]||'') + (ln[0]||'');
+    } catch(e) { toast(e.error || 'Save failed', 'error'); }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:0.5rem"></i>Save Personal Details'; }
+}
+
+// ── Save Academic ─────────────────────────────────────────────────────
+async function saveAcademic() {
+    const v1 = validateRequired('department','fld-dept','Department required');
+    const v2 = validateResearch();
+    if (!v1 || !v2) { toast('Please fix the errors above', 'error'); return; }
+
+    const btn = document.getElementById('saveAcademicBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    try {
+        await apiPut(`/scholar/profile/${scholarId}`, {
+            department   : document.getElementById('department').value.trim(),
+            university   : document.getElementById('university').value.trim(),
+            enroll_year  : document.getElementById('batchYear').value || document.getElementById('enrollYear').value,
+            fellowship   : document.getElementById('fellowship').value,
+            thesis_stage : document.getElementById('thesisStage').value,
+            research_area: document.getElementById('researchArea').value.trim(),
+        });
+        toast('Academic details saved!');
+    } catch(e) { toast(e.error || 'Save failed', 'error'); }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:0.5rem"></i>Save Academic Details'; }
+}
+
+// ── Change Password ───────────────────────────────────────────────────
+async function changePassword() {
+    const old = document.getElementById('oldPass').value;
+    if (!old) { setError('fld-oldPass', true); return; }
+    const v1 = validateNewPass();
+    const v2 = validateConfirm();
+    if (!v1 || !v2) return;
+
+    const btn = document.getElementById('changePassBtn');
+    const res = document.getElementById('passResult');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+    res.style.display = 'none';
+    try {
+        await apiPut('/auth/change-password', {
+            user_id     : user.id,
+            old_password: old,
+            new_password: document.getElementById('newPass').value,
+        });
+        res.style.cssText = 'display:block;color:#4ade80;font-size:0.88rem';
+        res.innerHTML = '<i class="fas fa-check-circle"></i> Password changed successfully!';
+        document.getElementById('oldPass').value = '';
+        document.getElementById('newPass').value = '';
+        document.getElementById('confirmPass').value = '';
+        document.getElementById('strengthFill').style.width = '0%';
+        document.getElementById('strengthLabel').textContent = '';
+    } catch(e) {
+        res.style.cssText = 'display:block;color:#f87171;font-size:0.88rem';
+        res.innerHTML = `<i class="fas fa-times-circle"></i> ${e.error || 'Failed to update password'}`;
+    }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key" style="margin-right:0.5rem"></i>Update Password'; }
+}
+
+init();
+</script>
+</body>
+</html>

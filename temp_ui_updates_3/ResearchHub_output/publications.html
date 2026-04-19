@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Publications — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body animate-in">
+            <div class="header-row">
+                <div>
+                    <h1>Publications</h1>
+                    <p>Submit and track your research publications and journal contributions</p>
+                </div>
+                <button class="btn-auth" style="width:auto;padding:0.7rem 1.5rem" onclick="openModal()">
+                    <i class="fas fa-plus" style="margin-right:0.5rem"></i> New Publication
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:2rem">
+                <div class="card-stat">
+                    <div class="cs-icon blue"><i class="fas fa-book"></i></div>
+                    <div class="cs-val" id="totalCount">0</div>
+                    <div class="cs-label">Total</div>
+                </div>
+                <div class="card-stat">
+                    <div class="cs-icon green"><i class="fas fa-check-circle"></i></div>
+                    <div class="cs-val" id="publishedCount">0</div>
+                    <div class="cs-label">Published / Approved</div>
+                </div>
+                <div class="card-stat">
+                    <div class="cs-icon orange"><i class="fas fa-hourglass-half"></i></div>
+                    <div class="cs-val" id="reviewCount">0</div>
+                    <div class="cs-label">Under Review</div>
+                </div>
+            </div>
+
+            <!-- Grid -->
+            <div id="pubGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:1.5rem">
+                <div class="empty-state" style="grid-column:1/-1">Loading publications...</div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- MODAL: Add Publication -->
+<div id="pubModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;display:none;align-items:center;justify-content:center;">
+    <div class="panel" style="width:560px;max-height:90vh;overflow-y:auto;">
+        <div class="panel-head">
+            <h3>Submit New Publication</h3>
+            <button onclick="closeModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.3rem;">&times;</button>
+        </div>
+        <form id="pubForm" onsubmit="submitPub(event)">
+            <div class="form-group">
+                <label>Title *</label>
+                <input type="text" id="pubTitle" class="form-control" placeholder="Full publication title" required>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                <div class="form-group">
+                    <label>Journal / Venue</label>
+                    <input type="text" id="pubJournal" class="form-control" placeholder="e.g., IEEE Transactions">
+                </div>
+                <div class="form-group">
+                    <label>Year</label>
+                    <input type="number" id="pubYear" class="form-control" placeholder="2025" min="2000" max="2030">
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="pubType" class="form-control">
+                        <option value="journal">Journal</option>
+                        <option value="conference">Conference</option>
+                        <option value="book_chapter">Book Chapter</option>
+                        <option value="preprint">Preprint</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>DOI (optional)</label>
+                    <input type="text" id="pubDoi" class="form-control" placeholder="10.xxxx/xxxxx">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Description / Abstract</label>
+                <textarea id="pubDesc" class="form-control" placeholder="Brief abstract or description..."></textarea>
+            </div>
+            <div style="display:flex;gap:1rem;justify-content:flex-end;margin-top:1rem">
+                <button type="button" onclick="closeModal()" style="padding:0.75rem 1.5rem;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer">Cancel</button>
+                <button type="submit" class="btn-auth" style="width:auto;padding:0.75rem 1.5rem">Submit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const user = requireAuth('scholar');
+let scholarId = null;
+
+async function init() {
+    renderSidebar('publications.html');
+    try {
+        const s = await apiGet(`/scholar/${user.scholar_id || user.id}`);
+        scholarId = s.id;
+        await loadPubs();
+    } catch(e) { console.error(e); }
+}
+
+async function loadPubs() {
+    const grid = document.getElementById('pubGrid');
+    try {
+        const pubs = await apiGet(`/publications/${scholarId}`);
+        document.getElementById('totalCount').innerText      = pubs.length;
+        document.getElementById('publishedCount').innerText  = pubs.filter(p => p.status === 'published' || p.status === 'approved').length;
+        document.getElementById('reviewCount').innerText     = pubs.filter(p => p.status === 'under_review').length;
+
+        if (!pubs.length) {
+            grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-book-open" style="font-size:3rem;opacity:0.15;margin-bottom:1rem;display:block"></i>No publications yet. Submit your first one!</div>`;
+            return;
+        }
+
+        grid.innerHTML = pubs.map(p => `
+        <div class="panel">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem">
+                <h3 style="font-size:1rem;font-weight:600;line-height:1.4">${p.title}</h3>
+                <span class="badge ${badgeClass(p.status)}" style="flex-shrink:0">${p.status.replace('_',' ')}</span>
+            </div>
+            ${p.journal ? `<p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.5rem"><i class="fas fa-journal-whills" style="margin-right:0.4rem"></i>${p.journal}${p.year ? ` · ${p.year}` : ''}</p>` : ''}
+            ${p.pub_type ? `<p style="color:var(--text-muted);font-size:0.8rem;margin-bottom:0.5rem;text-transform:capitalize"><i class="fas fa-tag" style="margin-right:0.4rem"></i>${p.pub_type}</p>` : ''}
+            ${p.description ? `<p style="font-size:0.85rem;opacity:0.7;margin-top:0.75rem;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.description}</p>` : ''}
+            ${p.doi ? `<p style="margin-top:0.75rem;font-size:0.8rem"><a href="https://doi.org/${p.doi}" target="_blank" style="color:var(--primary)">DOI: ${p.doi}</a></p>` : ''}
+        </div>`).join('');
+    } catch(e) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;color:#ef4444">Failed to load publications</div>`;
+    }
+}
+
+function openModal() {
+    document.getElementById('pubModal').style.display = 'flex';
+}
+function closeModal() {
+    document.getElementById('pubModal').style.display = 'none';
+    document.getElementById('pubForm').reset();
+}
+
+async function submitPub(e) {
+    e.preventDefault();
+    const payload = {
+        scholar_id  : scholarId,
+        title       : document.getElementById('pubTitle').value.trim(),
+        journal     : document.getElementById('pubJournal').value.trim(),
+        year        : parseInt(document.getElementById('pubYear').value) || null,
+        pub_type    : document.getElementById('pubType').value,
+        doi         : document.getElementById('pubDoi').value.trim(),
+        description : document.getElementById('pubDesc').value.trim(),
+        status      : 'under_review',
+    };
+    try {
+        await apiPost('/publications/', payload);
+        toast('Publication submitted for review!');
+        closeModal();
+        await loadPubs();
+    } catch(err) {
+        toast(err.error || 'Submission failed', 'error');
+    }
+}
+
+init();
+</script>
+</body>
+</html>

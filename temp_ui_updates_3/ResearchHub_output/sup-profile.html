@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ResearchHub — Faculty Profile</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/toast.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .profile-wrapper { max-width: 860px; }
+    .profile-header-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 1.75rem;
+    }
+    .profile-avatar-wrap { position: relative; }
+    .profile-avatar {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #7c3aed);
+      color: #fff; font-size: 1.6rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .avatar-edit-btn {
+      position: absolute; bottom: 2px; right: 2px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #6366f1; border: 2px solid var(--bg);
+      color: #fff; font-size: 0.55rem;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .profile-meta { flex: 1; }
+    .profile-meta h2 { color: #fff; font-size: 1.4rem; margin-bottom: 0.2rem; }
+    .profile-meta .meta-email { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.7rem; }
+    .profile-tags { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .profile-tag {
+      padding: 3px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+      background: rgba(99,102,241,0.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3);
+    }
+    .edit-profile-btn {
+      padding: 0.6rem 1.4rem; border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1, #7c3aed);
+      color: #fff; border: none; font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .edit-profile-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+    .profile-tabs {
+      display: flex; margin-bottom: 1.5rem;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
+      border-radius: 10px; padding: 0.3rem; width: fit-content;
+    }
+    .profile-tab {
+      padding: 0.5rem 1.4rem; border-radius: 8px; font-size: 0.875rem; font-weight: 500;
+      color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+      border: none; background: transparent;
+    }
+    .profile-tab.active { background: #6366f1; color: #fff; font-weight: 600; }
+    .profile-tab:not(.active):hover { color: #fff; }
+    .profile-section {
+      background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: 16px; padding: 2rem;
+    }
+    .profile-section h3 {
+      font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem; border-bottom: 1px solid var(--glass-border);
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+    .form-full { grid-column: 1 / -1; }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+    .form-group label { font-size: 0.82rem; color: rgba(255,255,255,0.7); font-weight: 500; }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.04); color: #fff; font-size: 0.9rem;
+      font-family: 'Outfit', sans-serif; transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+    .form-group select option { background: #1a0a2e; }
+    .form-group textarea { resize: vertical; min-height: 90px; }
+    .form-group input:disabled { opacity: 0.5; cursor: not-allowed; }
+    .form-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .profile-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
+    .btn-cancel {
+      padding: 0.75rem 1.6rem; border-radius: 10px; background: transparent;
+      border: 1px solid var(--glass-border); color: var(--text-muted);
+      font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-cancel:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-save {
+      padding: 0.75rem 1.6rem; border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1, #7c3aed);
+      color: #fff; border: none; font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-save:hover { opacity: 0.9; transform: translateY(-1px); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div id="sidebar-container"></div>
+      <div class="profile-header-card">
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar">RK</div>
+          <div class="avatar-edit-btn"><i class="fas fa-pencil-alt"></i></div>
+        </div>
+        <div class="profile-meta">
+          <h2>Dr. Ramesh Kumar</h2>
+          <div class="meta-email" id="facEmail">faculty@university.edu</div>
+          <div class="profile-tags">
+            <span class="profile-tag">CS Dept</span>
+            <span class="profile-tag">Associate Professor</span>
+            <span class="profile-tag">PhD Guide</span>
+          </div>
+        </div>
+        <button class="edit-profile-btn" onclick="enableEdit()">
+          <i class="fas fa-edit" style="margin-right:0.4rem"></i> Edit profile
+        </button>
+      </div>
+
+      <div class="profile-tabs">
+        <button class="profile-tab active" onclick="showTab('personal', this)">Personal</button>
+        <button class="profile-tab" onclick="showTab('academic', this)">Academic</button>
+        <button class="profile-tab" onclick="showTab('security', this)">Security</button>
+      </div>
+
+      <!-- Personal -->
+      <div id="tabPersonal" class="tab-panel active">
+        <div class="profile-section">
+          <h3>Personal information</h3>
+          <form id="personalForm" onsubmit="savePersonal(event)">
+            <div class="form-group">
+                <label>Title</label>
+                <select id="title">
+                  <option value="">Select</option>
+                  <option>Mr.</option>
+                  <option>Mrs.</option>
+                  <option>Ms.</option>
+                  <option>Dr.</option>
+                  <option>Prof.</option>
+                </select>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>First name</label>
+                <input type="text" id="firstName" value="Ramesh">
+              </div>
+              <div class="form-group">
+                <label>Last name</label>
+                <input type="text" id="lastName" value="Kumar">
+              </div>
+              <div class="form-group">
+                <label>Date of birth</label>
+                <input type="date" id="dob">
+              </div>
+              <div class="form-group">
+                <label>Gender</label>
+                <select id="gender">
+                  <option value="male" selected>Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Phone number</label>
+                <input type="tel" id="phone" placeholder="10-digit number">
+                <span class="form-hint">Numbers only, no spaces or symbols</span>
+              </div>
+              <div class="form-group">
+                <label>Email address</label>
+                <input type="email" id="emailDisplay" disabled>
+                <span class="form-hint"><i class="fas fa-lock"></i> Email cannot be changed</span>
+              </div>
+              <div class="form-group form-full">
+                <label>Address</label>
+                <textarea id="address" placeholder="Your current address…"></textarea>
+              </div>
+            </div>
+            <div class="profile-actions">
+              <button type="button" class="btn-cancel" onclick="resetForm()">Cancel</button>
+              <button type="submit" class="btn-save">Save changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Academic -->
+      <div id="tabAcademic" class="tab-panel">
+        <div class="profile-section">
+          <h3>Academic information</h3>
+          <form id="academicForm" onsubmit="saveAcademic(event)">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Designation</label>
+                <select id="acadDesignation">
+                  <option value="">Select</option>
+                  <option>Professor</option>
+                  <option>Associate Professor</option>
+                  <option>Assistant Professor</option>
+                  <option>Professor of Practice</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Department</label>
+                <select id="acadDept">
+                  <option value="">Select</option>
+                  <option>Computer Science</option>
+                  <option>Electronics</option>
+                  <option>Mechanical</option>
+                  <option>Civil</option>
+                  <option>Physics</option>
+                  <option>Chemistry</option>
+                  <option>Mathematics</option>
+                  <option>Biotechnology</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Scholars Assigned</label>
+                <input type="text" id="acadScholarsCount" value="0" disabled>
+              </div>
+              <div class="form-group">
+                <label>Experience (Years)</label>
+                <input type="text" id="acadExperience" placeholder="e.g. 15 years">
+              </div>
+              <div class="form-group form-full">
+                <label>Specialization / Research Area</label>
+                <textarea id="acadSpecialization" placeholder="List your key research areas…"></textarea>
+              </div>
+            </div>
+            <div class="profile-actions">
+              <button type="submit" class="btn-save">Save academic details</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Security -->
+      <div id="tabSecurity" class="tab-panel">
+        <div class="profile-section">
+          <h3>Change password</h3>
+          <form onsubmit="changePassword(event)">
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label>Current password</label>
+                <input type="password" id="curPwd" placeholder="Enter current password">
+              </div>
+              <div class="form-group">
+                <label>New password</label>
+                <input type="password" id="newPwd" placeholder="Min. 8 chars, 1 uppercase, 1 number">
+              </div>
+              <div class="form-group">
+                <label>Confirm new password</label>
+                <input type="password" id="confPwd" placeholder="Repeat new password">
+              </div>
+            </div>
+            <div class="profile-actions">
+              <button type="submit" class="btn-save">Update password</button>
+            </div>
+          </form>
+
+          <h3 style="margin-top:2.5rem; color:#ef4444; border-bottom-color:rgba(239,68,68,0.2)">Danger zone</h3>
+          <div style="background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.1); border-radius:12px; padding:1.5rem;">
+            <p style="font-size:0.875rem; color:rgba(255,255,255,0.7); margin-bottom:1.25rem;">
+              Deleting your account removes all your data and unassigns all scholars. This cannot be undone.
+            </p>
+            <button onclick="confirmDeleteAccount()" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:0.6rem 1.2rem; border-radius:8px; font-weight:600; cursor:pointer; transition:all 0.2s;">
+              Delete my account
+            </button>
+          </div>
+        </div>
+      </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const user = requireAuth('faculty');
+  let fullProfile = null;
+
+  if (user) init();
+
+  async function init() {
+    renderSidebar('sup-profile.html');
+    loadPendingBadge();
+    try {
+        fullProfile = await apiGet(`/profile/${user.id}`);
+        populateFields();
+    } catch(err) {
+        toast('Failed to load profile details', 'error');
+    }
+  }
+
+  function populateFields() {
+    if (!fullProfile) return;
+
+    const name = fullProfile.name || 'Dr. Faculty';
+    const initials = name.split(' ').map(p => p[0]).join('').substring(0,2).toUpperCase();
+
+    // Header items
+    document.querySelector('.profile-avatar').textContent = initials;
+    document.querySelector('.profile-header-card h2').textContent = name;
+    document.getElementById('facEmail').textContent = fullProfile.email || '';
+    document.getElementById('emailDisplay').value = fullProfile.email || '';
+    
+    // Personal Tab
+    document.getElementById('title').value     = fullProfile.title || '';
+    document.getElementById('firstName').value = fullProfile.first_name || '';
+    document.getElementById('lastName').value  = fullProfile.last_name || '';
+    document.getElementById('gender').value    = fullProfile.gender || '';
+    document.getElementById('phone').value     = fullProfile.phone || '';
+    document.getElementById('dob').value       = fullProfile.dob || '';
+    document.getElementById('address').value   = fullProfile.address || '';
+    
+    // Academic Tab
+    document.getElementById('acadDesignation').value   = fullProfile.designation || '';
+    document.getElementById('acadDept').value          = fullProfile.department || '';
+    document.getElementById('acadExperience').value    = fullProfile.experience || '';
+    document.getElementById('acadSpecialization').value = fullProfile.specialization || '';
+  }
+
+  function showTab(tab, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.profile-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function enableEdit() { 
+      document.querySelector('button[onclick="showTab(\'personal\', this)"]').click();
+      toast('Edit mode active (Personal tab)');
+  }
+
+  function resetForm() {
+    populateFields();
+    toast('Changes discarded.');
+  }
+
+  async function savePersonal(e) {
+    e.preventDefault();
+    const payload = {
+        title:      document.getElementById('title').value,
+        first_name: document.getElementById('firstName').value.trim(),
+        last_name:  document.getElementById('lastName').value.trim(),
+        gender:     document.getElementById('gender').value,
+        phone:      document.getElementById('phone').value,
+        dob:        document.getElementById('dob').value,
+        address:    document.getElementById('address').value
+    };
+    
+    try {
+        const res = await apiPut(`/profile/${user.id}`, data);
+        toast(res.message);
+        user.name = res.name;
+        saveUser(user);
+        init();
+    } catch(err) {
+        toast(err.error || 'Update failed', 'error');
+    }
+  }
+
+  async function saveAcademic(e) {
+    e.preventDefault();
+    const data = {
+        designation:    document.getElementById('acadDesignation').value,
+        department:     document.getElementById('acadDept').value,
+        experience:      document.getElementById('acadExperience').value,
+        specialization:  document.getElementById('acadSpecialization').value
+    };
+    
+    try {
+        const res = await apiPut(`/profile/${user.id}`, data);
+        toast(res.message);
+        user.department = data.department;
+        saveUser(user);
+        init();
+    } catch(err) {
+        toast(err.error || 'Update failed', 'error');
+    }
+  }
+
+  async function changePassword(e) {
+    e.preventDefault();
+    const cp = document.getElementById('curPwd').value;
+    const np = document.getElementById('newPwd').value;
+    const con = document.getElementById('confPwd').value;
+    
+    if (np !== con) { toast('Passwords do not match', 'error'); return; }
+    if (np.length < 6) { toast('New password too short', 'error'); return; }
+    
+    try {
+        const res = await apiPut(`/auth/change-password/${user.id}`, {
+            current_password: cp,
+            new_password: np
+        });
+        toast(res.message);
+        e.target.reset();
+    } catch(err) {
+        toast(err.error || 'Password update failed', 'error');
+    }
+  }
+
+  async function confirmDeleteAccount() {
+    if (!confirm('Are you sure you want to delete your account? This action is permanent!')) return;
+    
+    try {
+        await apiDelete(`/auth/account/${user.id}`);
+        toast('Account deleted.');
+        logout();
+    } catch(err) {
+        toast('Delete failed', 'error');
+    }
+  }
+</script>
+</body>
+</html>

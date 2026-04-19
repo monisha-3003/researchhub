@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Approvals — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .leave-tabs { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+        .leave-tab {
+            padding:0.5rem 1.2rem; border-radius:20px; font-size:0.83rem; font-weight:600;
+            border:1px solid var(--glass-border); background:transparent; color:var(--text-muted);
+            cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:0.4rem;
+        }
+        .leave-tab.active { background:#fff; color:#000; border-color:#fff; }
+        .leave-tab:not(.active):hover { border-color:var(--primary); color:var(--primary); }
+        .tab-count {
+            background:rgba(255,255,255,0.15); color:#fff; padding:1px 7px;
+            border-radius:10px; font-size:0.72rem; font-weight:700;
+        }
+        .leave-tab.active .tab-count { background:rgba(0,0,0,0.15); color:#000; }
+        .leave-card {
+            background:var(--glass); border:1px solid var(--glass-border);
+            border-radius:14px; padding:1.25rem 1.5rem; margin-bottom:0.85rem;
+            transition:border-color 0.2s;
+        }
+        .leave-card:hover { border-color:rgba(255,255,255,0.15); }
+        .leave-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; }
+        .leave-scholar { font-weight:700; font-size:1rem; color:#fff; margin-bottom:0.2rem; }
+        .leave-meta { font-size:0.82rem; color:var(--text-muted); display:flex; gap:1rem; flex-wrap:wrap; margin-top:0.4rem; }
+        .leave-meta span { display:flex; align-items:center; gap:0.3rem; }
+        .leave-reason { font-size:0.85rem; color:rgba(255,255,255,0.65); margin-top:0.75rem; font-style:italic; }
+        .leave-actions { display:flex; gap:0.5rem; margin-top:1rem; padding-top:1rem; border-top:1px solid var(--glass-border); }
+        .btn-approve { padding:0.45rem 1.1rem; border-radius:8px; border:1px solid #22c55e; background:rgba(34,197,94,0.08); color:#22c55e; cursor:pointer; font-size:0.82rem; font-weight:600; transition:all 0.2s; }
+        .btn-approve:hover { background:rgba(34,197,94,0.18); }
+        .btn-reject  { padding:0.45rem 1.1rem; border-radius:8px; border:1px solid #ef4444; background:rgba(239,68,68,0.08); color:#ef4444; cursor:pointer; font-size:0.82rem; font-weight:600; transition:all 0.2s; }
+        .btn-reject:hover { background:rgba(239,68,68,0.18); }
+        .reviewed-note { font-size:0.8rem; color:var(--text-muted); display:flex; align-items:center; gap:0.3rem; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body animate-in">
+            <div class="header-row">
+                <div>
+                    <h1>Leave Approvals</h1>
+                    <p>Review and respond to your scholars' leave applications</p>
+                </div>
+            </div>
+
+            <!-- 4-Tab filter bar -->
+            <div class="leave-tabs">
+                <button class="leave-tab active" id="tab-pending" onclick="setTab('pending',this)">
+                    <i class="fas fa-clock"></i> Pending <span class="tab-count" id="cnt-pending">—</span>
+                </button>
+                <button class="leave-tab" id="tab-approved" onclick="setTab('approved',this)">
+                    <i class="fas fa-check-circle"></i> Approved <span class="tab-count" id="cnt-approved">—</span>
+                </button>
+                <button class="leave-tab" id="tab-rejected" onclick="setTab('rejected',this)">
+                    <i class="fas fa-times-circle"></i> Rejected <span class="tab-count" id="cnt-rejected">—</span>
+                </button>
+                <button class="leave-tab" id="tab-all" onclick="setTab('all',this)">
+                    <i class="fas fa-list"></i> All History <span class="tab-count" id="cnt-all">—</span>
+                </button>
+            </div>
+
+            <div id="leaveCards">
+                <div class="empty-state">Loading...</div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const user = requireAuth(['supervisor','faculty']);
+let currentTab = 'pending';
+let ALL_LEAVES  = [];
+let supervisorId = null;
+
+async function init() {
+    renderSidebar('sup-leave.html');
+    supervisorId = await resolveSupervisorId();
+    if (!supervisorId) {
+        document.getElementById('leaveCards').innerHTML = `<div class="empty-state">No supervisor profile found. Please contact admin.</div>`;
+        return;
+    }
+    await loadAllLeaves();
+}
+
+async function resolveSupervisorId() {
+    if (user.supervisor_id) return user.supervisor_id;
+    try {
+        const svs = await apiGet('/supervisor/all');
+        const mine = svs.find(s => s.user_id == user.id);
+        if (mine) {
+            user.supervisor_id = mine.id;
+            localStorage.setItem('user', JSON.stringify(user));
+            return mine.id;
+        }
+    } catch(_) {}
+    return null;
+}
+
+async function loadAllLeaves() {
+    document.getElementById('leaveCards').innerHTML = `<div class="empty-state">Loading...</div>`;
+    try {
+        ALL_LEAVES = await apiGet(`/supervisor/${supervisorId}/leave-requests?all=1`);
+        updateTabCounts();
+        renderTab();
+    } catch(e) {
+        document.getElementById('leaveCards').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i> Failed to load leave requests</div>`;
+    }
+}
+
+function updateTabCounts() {
+    const counts = { pending:0, approved:0, rejected:0, all: ALL_LEAVES.length };
+    ALL_LEAVES.forEach(l => { if (counts[l.status] !== undefined) counts[l.status]++; });
+    ['pending','approved','rejected','all'].forEach(t => {
+        const el = document.getElementById(`cnt-${t}`);
+        if (el) el.textContent = counts[t];
+    });
+}
+
+function setTab(tab, btn) {
+    currentTab = tab;
+    document.querySelectorAll('.leave-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTab();
+}
+
+function dayCount(from, to) {
+    try {
+        const d = (new Date(to) - new Date(from)) / 86400000 + 1;
+        return d > 0 ? d : 1;
+    } catch { return '?'; }
+}
+
+function renderTab() {
+    const filtered = currentTab === 'all' ? ALL_LEAVES : ALL_LEAVES.filter(l => l.status === currentTab);
+    const container = document.getElementById('leaveCards');
+
+    if (!filtered.length) {
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-check-double" style="font-size:2.5rem;opacity:0.2;margin-bottom:1rem;display:block"></i>No ${currentTab === 'all' ? '' : currentTab + ' '}leave requests</div>`;
+        return;
+    }
+
+    container.innerHTML = filtered.map(l => {
+        const days = dayCount(l.from_date, l.to_date);
+        const isPending = l.status === 'pending';
+        return `
+        <div class="leave-card" id="lcard-${l.id}">
+            <div class="leave-card-top">
+                <div style="flex:1">
+                    <div class="leave-scholar">${l.scholar_name || 'Scholar'}</div>
+                    <div class="leave-meta">
+                        <span><i class="fas fa-tag"></i> ${l.leave_type || 'Personal'}</span>
+                        <span><i class="fas fa-calendar"></i> ${formatDate(l.from_date)} → ${formatDate(l.to_date)}</span>
+                        <span><i class="fas fa-sun"></i> ${days} day${days !== 1 ? 's' : ''}</span>
+                        <span><i class="fas fa-clock"></i> Applied ${formatDate(l.applied_at)}</span>
+                        ${l.reviewed_at ? `<span><i class="fas fa-check"></i> Reviewed ${formatDate(l.reviewed_at)}</span>` : ''}
+                    </div>
+                    ${l.reason ? `<div class="leave-reason">"${l.reason}"</div>` : ''}
+                </div>
+                <span class="badge ${badgeClass(l.status)}" style="flex-shrink:0">${l.status}</span>
+            </div>
+            ${isPending ? `
+            <div class="leave-actions">
+                <button class="btn-approve" onclick="reviewLeave(${l.id},'approved')">
+                    <i class="fas fa-check"></i> Approve
+                </button>
+                <button class="btn-reject" onclick="reviewLeave(${l.id},'rejected')">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+            </div>` : `
+            <div class="leave-actions">
+                <span class="reviewed-note"><i class="fas fa-info-circle"></i> ${l.status === 'approved' ? 'Approved' : 'Rejected'} on ${formatDate(l.reviewed_at) || '—'}</span>
+            </div>`}
+        </div>`;
+    }).join('');
+}
+
+async function reviewLeave(id, action) {
+    try {
+        await apiPut(`/supervisor/leave/${id}/review`, { status: action });
+        toast(`Leave ${action}!`, action === 'approved' ? 'success' : 'info');
+        await loadAllLeaves();  // reload and recount all tabs
+    } catch(e) { toast('Action failed', 'error'); }
+}
+
+function formatDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'});
+}
+
+init();
+</script>
+</body>
+</html>

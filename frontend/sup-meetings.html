@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ResearchHub — Review Meetings</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/toast.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .meetings-layout { display:grid; grid-template-columns:320px 1fr; gap:1.5rem; margin-bottom:1.5rem; }
+    .month-panel {
+      background:var(--glass); border:1px solid var(--glass-border); border-radius:14px; padding:1.4rem;
+    }
+    .mp-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem; }
+    .mp-header h3 { font-size:0.9rem; font-weight:700; color:#fff; }
+    .mp-header span { color:var(--text-muted); font-size:0.82rem; }
+    .mp-row { display:flex; justify-content:space-between; padding:0.75rem 0; border-bottom:1px solid var(--glass-border); }
+    .mp-row:last-child { border-bottom:none; }
+    .mp-key   { font-size:0.85rem; color:rgba(255,255,255,0.7); }
+    .mp-val   { font-size:0.9rem; font-weight:700; color:#fff; }
+    .mp-val.green { color:#22c55e; }
+    .mp-val.blue  { color:var(--primary); }
+    .mp-val.red   { color:#ef4444; }
+
+    .info-panel {
+      background:var(--glass); border:1px solid var(--glass-border); border-radius:14px; padding:1.4rem;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:0.6rem;
+      min-height:130px;
+    }
+    .info-panel p { color:var(--text-muted); font-size:0.85rem; }
+
+    .section-label { font-size:0.72rem; font-weight:700; color:var(--text-muted); letter-spacing:0.07em; text-transform:uppercase; margin:1.25rem 0 0.85rem; }
+    .meeting-card {
+      background:var(--glass); border:1px solid var(--glass-border);
+      border-radius:14px; padding:1.2rem 1.4rem; margin-bottom:0.85rem;
+      display:flex; align-items:center; gap:1.2rem;
+    }
+    .mc-date { text-align:center; min-width:48px; }
+    .mc-date .day   { font-size:1.5rem; font-weight:700; color:#fff; line-height:1; }
+    .mc-date .month { font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; }
+    .mc-divider { width:2px; height:50px; background:var(--glass-border); border-radius:2px; }
+    .mc-avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#7c3aed); color:#fff; font-size:0.78rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .mc-title { font-size:0.88rem; font-weight:700; color:#fff; }
+    .mc-sub   { font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem; }
+    .mc-badge { margin-left:auto; font-size:0.72rem; font-weight:700; padding:3px 10px; border-radius:10px; }
+    .mb-upcoming  { background:rgba(99,102,241,0.12); color:#a5b4fc; }
+    .mb-completed { background:rgba(34,197,94,0.12); color:#22c55e; }
+
+    .btn-new-meeting {
+      padding:0.6rem 1.3rem; border-radius:10px;
+      background:linear-gradient(135deg,var(--primary),var(--secondary));
+      color:#000; border:none; font-weight:700; font-size:0.875rem; cursor:pointer; transition:all 0.2s;
+    }
+    .btn-new-meeting:hover { transform:translateY(-1px); box-shadow:0 5px 15px rgba(0,242,255,0.2); }
+
+    /* Modal */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:999; }
+    .modal-box { background:#1a1a2e; border:1px solid var(--glass-border); border-radius:16px; padding:2rem; width:100%; max-width:480px; }
+    .modal-box h3 { color:#fff; margin-bottom:1.5rem; font-size:1.1rem; }
+    .modal-field { margin-bottom:1rem; }
+    .modal-field label { display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:0.4rem; }
+    .modal-field input, .modal-field select, .modal-field textarea {
+      width:100%; padding:0.6rem 0.8rem; background:rgba(0,0,0,0.4);
+      border:1px solid var(--glass-border); border-radius:8px; color:#fff; font-family:inherit; outline:none; box-sizing:border-box;
+    }
+    .modal-field input:focus, .modal-field select:focus { border-color:var(--primary); }
+    .modal-actions { display:flex; gap:1rem; margin-top:1.5rem; }
+    .btn-modal-cancel { flex:1; padding:0.7rem; border-radius:8px; background:transparent; border:1px solid var(--glass-border); color:var(--text-muted); font-size:0.9rem; cursor:pointer; }
+    .btn-modal-save   { flex:1; padding:0.7rem; border-radius:8px; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:#000; font-size:0.9rem; font-weight:700; border:none; cursor:pointer; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div id="sidebar-container"></div>
+  <main class="main-wrapper">
+    <div class="content-body animate-in">
+      <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start">
+      <div>
+        <h1>Review meetings</h1>
+        <p class="page-sub">Schedule, track and add notes for all scholar review sessions</p>
+      </div>
+      <button class="btn-new-meeting" onclick="openModal()">
+        <i class="fas fa-plus" style="margin-right:0.4rem"></i> Schedule meeting
+      </button>
+    </div>
+
+    <div class="meetings-layout">
+      <div class="month-panel">
+        <div class="mp-header"><h3>This month</h3><span id="monthLabel">—</span></div>
+        <div class="mp-row"><span class="mp-key">Total meetings</span><span class="mp-val" id="totalCount">0</span></div>
+        <div class="mp-row"><span class="mp-key">Completed</span><span class="mp-val green" id="doneCount">0</span></div>
+        <div class="mp-row"><span class="mp-key">Upcoming</span><span class="mp-val blue" id="upCount">0</span></div>
+      </div>
+      <div class="info-panel" id="infoPanel">
+        <i class="fas fa-calendar-check" style="font-size:2rem; color:var(--primary); margin-bottom:0.5rem;"></i>
+        <p>No meetings scheduled yet.<br>Click <strong>"Schedule meeting"</strong> to add one.</p>
+      </div>
+    </div>
+
+    <div id="upcomingSection"></div>
+    <div id="completedSection"></div>
+  </div>
+</div>
+
+<!-- Schedule Meeting Modal -->
+<div class="modal-overlay" id="scheduleModal" style="display:none;">
+  <div class="modal-box">
+    <h3><i class="fas fa-calendar-plus" style="color:var(--primary); margin-right:0.5rem;"></i>Schedule Review Meeting</h3>
+    <div class="modal-field">
+      <label>Scholar</label>
+      <select id="m_scholar"></select>
+    </div>
+    <div class="modal-field">
+      <label>Meeting Title</label>
+      <input type="text" id="m_title" placeholder="e.g. DC Meeting, Progress Review...">
+    </div>
+    <div class="modal-field">
+      <label>Date</label>
+      <input type="date" id="m_date">
+    </div>
+    <div class="modal-field">
+      <label>Time</label>
+      <input type="time" id="m_time">
+    </div>
+    <div class="modal-field">
+      <label>Location / Link</label>
+      <input type="text" id="m_location" placeholder="e.g. Room 204, Google Meet link...">
+    </div>
+    <div class="modal-field">
+      <label>Notes (optional)</label>
+      <textarea id="m_notes" rows="2" placeholder="Agenda or discussion points..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-modal-save" onclick="saveMeeting()">Schedule</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const user = requireAuth('faculty');
+  let scholars = [];
+  let meetings = [];
+
+  if (user) { renderSidebar('sup-meetings.html'); loadPendingBadge(); init(); }
+
+  async function init() {
+    const now = new Date();
+    document.getElementById('monthLabel').textContent = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+    try {
+      [scholars, meetings] = await Promise.all([
+        apiGet(`/supervisor/${user.supervisor_id}/scholars`),
+        apiGet(`/meetings/supervisor/${user.supervisor_id}`)
+      ]);
+      renderMeetings();
+    } catch(e) { console.error('Failed to load meetings', e); }
+  }
+
+  function renderMeetings() {
+    const upcoming  = meetings.filter(m => m.status === 'scheduled');
+    const completed = meetings.filter(m => m.status === 'completed');
+
+    document.getElementById('totalCount').textContent = meetings.length;
+    document.getElementById('doneCount').textContent = completed.length;
+    document.getElementById('upCount').textContent = upcoming.length;
+
+    if (!meetings.length) {
+      document.getElementById('infoPanel').style.display = 'flex';
+    } else {
+      document.getElementById('infoPanel').style.display = 'none';
+    }
+
+    const mkCard = m => {
+      const d = new Date(m.scheduled_at);
+      const day = d.getDate();
+      const mon = d.toLocaleString('default', { month: 'short' }).toUpperCase();
+      const init = (m.scholar_name || 'S').split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+      const timeStr = d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' });
+      return `<div class="meeting-card">
+        <div class="mc-date"><div class="day">${day}</div><div class="month">${mon}</div></div>
+        <div class="mc-divider"></div>
+        <div class="mc-avatar">${init}</div>
+        <div>
+          <div class="mc-title">${m.title} — ${m.scholar_name}</div>
+          <div class="mc-sub">${timeStr} ${m.notes ? '· ' + m.notes : ''}</div>
+        </div>
+        <span class="mc-badge ${m.status === 'scheduled' ? 'mb-upcoming' : 'mb-completed'}">${m.status}</span>
+        ${m.status === 'scheduled' ? `<button style="margin-left:0.5rem; padding:0.3rem 0.7rem; border-radius:6px; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); color:#22c55e; font-size:0.75rem; cursor:pointer;" onclick="markDone(${m.id})">Done</button>` : ''}
+      </div>`;
+    };
+
+    document.getElementById('upcomingSection').innerHTML = upcoming.length
+      ? `<div class="section-label">upcoming meetings</div>${upcoming.map(mkCard).join('')}` : '';
+    document.getElementById('completedSection').innerHTML = completed.length
+      ? `<div class="section-label" style="margin-top:1.5rem">completed this month</div>${completed.map(mkCard).join('')}` : '';
+  }
+
+  async function markDone(id) {
+    await apiPut(`/meetings/${id}`, { status: 'completed' });
+    meetings = await apiGet(`/meetings/supervisor/${user.supervisor_id}`);
+    renderMeetings();
+    toast('Meeting marked as completed!');
+  }
+
+  function openModal() {
+    if (!scholars.length) {
+      toast('No assigned scholars yet. Accept a student first.', 'error');
+      return;
+    }
+    const sel = document.getElementById('m_scholar');
+    sel.innerHTML = scholars.map(s => `<option value="${s.user_id}">${s.name} (${s.department})</option>`).join('');
+    document.getElementById('scheduleModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('scheduleModal').style.display = 'none';
+  }
+
+  async function saveMeeting() {
+    const scholar_id = document.getElementById('m_scholar').value;
+    const title      = document.getElementById('m_title').value.trim();
+    const date       = document.getElementById('m_date').value;
+    const timeValue  = document.getElementById('m_time').value;
+    if (!title || !date || !timeValue) { toast('Title, date, and time are required.', 'error'); return; }
+    const scheduled_at = new Date(`${date}T${timeValue}`).toISOString();
+    try {
+      await apiPost('/meetings', {
+        supervisor_id: user.supervisor_id,
+        scholar_id:   parseInt(scholar_id),
+        title,
+        scheduled_at: scheduled_at,
+        notes:        document.getElementById('m_notes').value
+      });
+      closeModal();
+      meetings = await apiGet(`/meetings/supervisor/${user.supervisor_id}`);
+      renderMeetings();
+      toast('Meeting scheduled successfully!');
+    } catch(e) { toast('Failed to schedule meeting', 'error'); }
+  }
+</script>
+</body>
+</html>

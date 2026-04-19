@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ResearchHub — View Profile</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .profile-container {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 2rem;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+    .profile-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .p-avatar {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; font-weight: 700; color: #fff;
+      margin: 0 auto 1.5rem auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .p-name { font-size: 1.8rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
+    .p-role { font-size: 1rem; color: var(--primary); font-weight: 500; margin-bottom: 1.5rem; }
+    
+    .p-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      text-align: left;
+      margin-top: 2rem;
+      border-top: 1px solid var(--glass-border);
+      padding-top: 2rem;
+    }
+    .p-item label {
+      display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 500;
+    }
+    .p-item div {
+      font-size: 1rem; color: #fff; background: rgba(0,0,0,0.2); padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border);
+    }
+    
+    /* Stats Panel */
+    .stats-panel {
+        display: flex; flex-direction: column; gap: 1.5rem;
+    }
+    .stat-box {
+        background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1.5rem; text-align: center;
+    }
+    .stat-title { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+    
+    .chart-container { position: relative; height: 180px; width: 180px; margin: 0 auto; }
+    .chart-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.4rem; font-weight: 700; color: var(--primary); }
+
+    .btn-back {
+      background: transparent; color: var(--text-muted); border: none; font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; transition: color 0.2s;
+    }
+    .btn-back:hover { color: #fff; }
+    
+    @media (max-width: 900px) {
+        .profile-container { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div id="sidebar-container"></div>
+
+  <main class="main-wrapper">
+    <div class="content-body animate-in">
+      <button class="btn-back" onclick="history.back()"><i class="fas fa-arrow-left"></i> Back</button>
+      
+      <div id="profileLoading" style="text-align:center; padding:5rem; color:var(--text-muted)">
+          <i class="fas fa-circle-notch fa-spin fa-2x"></i><br><br>Loading Profile...
+      </div>
+
+      <div class="profile-container" id="profileRow" style="display:none">
+        <!-- Left: Basic Info -->
+        <div class="profile-card" id="profileContent" style="width:100%; max-width:none">
+        </div>
+
+        <!-- Right: Stats -->
+        <div class="stats-panel" id="statsPanel">
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const user = requireAuth(); // any role can view profiles
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetId = urlParams.get('id');
+
+  if (user && targetId) {
+    init();
+  } else if (!targetId) {
+    document.getElementById('profileContent').innerHTML = "<div style='color:#ef4444'>No user specified.</div>";
+  }
+
+  async function init() {
+    renderSidebar(user.role === 'scholar' ? 'scholar-dashboard.html' : 'supervisor-dashboard.html');
+    
+    try {
+      const p = await apiGet(`/auth/profile/${targetId}`);
+      const initials = p.name ? p.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() : '?';
+      
+      // Hide and Show
+      document.getElementById('profileLoading').style.display = 'none';
+      document.getElementById('profileRow').style.display = 'grid';
+
+      let extraFields = '';
+      let statsHtml = '';
+
+      if (p.role === 'scholar') {
+          extraFields = `
+            <div class="p-item"><label>Research Focus</label><div>${p.research_focus || 'Not specified'}</div></div>
+            <div class="p-item"><label>Assigned Professor</label><div>${p.supervisor_name || 'Not assigned'}</div></div>
+          `;
+          
+          statsHtml = `
+            <div class="stat-box">
+                <div class="stat-title">Attendance</div>
+                <div class="chart-container">
+                    <canvas id="attChart"></canvas>
+                    <div class="chart-label">${p.attendance ? p.attendance.percentage : 0}%</div>
+                </div>
+                <p style="margin-top:1rem; font-size:0.85rem; color:var(--text-muted)">
+                    Present: ${p.attendance ? p.attendance.present : 0} days / Total: ${p.attendance ? p.attendance.total : 0}
+                </p>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">Research</div>
+                <div style="font-size:2.5rem; font-weight:700; color:var(--secondary)">${p.pub_count || 0}</div>
+                <div style="font-size:0.85rem; color:var(--text-muted)">Publications</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">Quick Actions</div>
+                <button class="action-btn" style="width:100%" onclick="window.location.href='messages.html?contact_id=${p.id}'">
+                    <i class="fas fa-comment"></i> Send Message
+                </button>
+            </div>
+          `;
+      } else {
+          extraFields = `
+            <div class="p-item"><label>Specialization</label><div>${p.specialization || 'Not specified'}</div></div>
+            <div class="p-item"><label>Experience</label><div>${p.experience || 'Not specified'}</div></div>
+          `;
+          statsHtml = `
+            <div class="stat-box">
+                <div class="stat-title">Academic Impact</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem">
+                    <div>
+                        <div style="font-size:1.8rem; font-weight:700; color:var(--primary)">${p.scholar_count || 0}</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted)">Scholars</div>
+                    </div>
+                    <div>
+                        <div style="font-size:1.8rem; font-weight:700; color:var(--secondary)">${p.pub_count || 0}</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted)">Research</div>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <button class="action-btn" style="width:100%" onclick="window.location.href='messages.html?contact_id=${p.id}'">
+                    <i class="fas fa-comment"></i> Send Message
+                </button>
+            </div>
+          `;
+      }
+
+      document.getElementById('profileContent').innerHTML = `
+        <div class="p-avatar">${initials}</div>
+        <div class="p-name">${p.name || 'Unknown User'}</div>
+        <div class="p-role">${p.role === 'scholar' ? 'Research Scholar' : 'Faculty Member'}</div>
+        
+        <div class="p-grid">
+          <div class="p-item"><label>Email Address</label><div>${p.email}</div></div>
+          <div class="p-item"><label>Department</label><div>${p.department || 'Not specified'}</div></div>
+          <div class="p-item"><label>Phone Number</label><div>${p.phone || 'Not specified'}</div></div>
+          <div class="p-item"><label>Gender</label><div>${p.gender || 'Not specified'}</div></div>
+          ${extraFields}
+        </div>
+      `;
+      
+      document.getElementById('statsPanel').innerHTML = statsHtml;
+
+      if (p.role === 'scholar' && p.attendance) {
+          setTimeout(() => renderChart(p.attendance), 100);
+      }
+
+    } catch(e) {
+      console.error(e);
+      document.getElementById('profileLoading').innerHTML = "<div style='color:#ef4444'>Error loading profile. Check backend logs.</div>";
+    }
+  }
+
+  function renderChart(att) {
+      const ctx = document.getElementById('attChart').getContext('2d');
+      new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+              labels: ['Present', 'Absent'],
+              datasets: [{
+                  data: [att.present, att.absent],
+                  backgroundColor: ['#00d4ff', 'rgba(255,255,255,0.05)'],
+                  borderWidth: 0,
+                  hoverOffset: 4
+              }]
+          },
+          options: {
+              cutout: '80%',
+              plugins: { legend: { display: false } },
+              responsive: true,
+              maintainAspectRatio: true
+          }
+      });
+  }
+</script>
+</body>
+</html>

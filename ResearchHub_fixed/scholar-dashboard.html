@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scholar Dashboard — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <div id="sidebar-container"></div>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-wrapper">
+            <div class="content-body animate-in">
+                <div class="header-row">
+                    <div>
+                        <h1 class="page-title">Good evening, <span id="welcomeName" class="text-gradient">Prem</span>! 👋</h1>
+                        <p class="page-sub" id="headerContext">Wednesday, March 25, 2026 &middot; Supervisor: Dr. Lakshmi Iyer</p>
+                    </div>
+                    <div class="top-actions" id="top-notif-container">
+                        <!-- Bell icon from nav.js -->
+                    </div>
+                </div>
+
+                <!-- STATS GRID (REFINED AS PER SCREENSHOT) -->
+                <div class="stats-grid">
+                    <div class="card-stat">
+                        <div class="cs-icon" style="background: rgba(0, 242, 255, 0.1); color: var(--primary);"><i class="fas fa-chart-pie"></i></div>
+                        <div class="cs-val" id="overallProgress">0%</div>
+                        <div class="cs-label">Overall progress</div>
+                        <div class="cs-tag blue">Year 1 of 5</div>
+                    </div>
+                    <div class="card-stat">
+                        <div class="cs-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;"><i class="fas fa-check-square"></i></div>
+                        <div class="cs-val" id="milestonesCount">0/0</div>
+                        <div class="cs-label">Milestones done</div>
+                        <div class="cs-tag orange">0 upcoming</div>
+                    </div>
+                    <div class="card-stat">
+                        <div class="cs-icon" style="background: rgba(34, 197, 94, 0.1); color: #22c55e;"><i class="fas fa-book"></i></div>
+                        <div class="cs-val" id="publicationsCount">0</div>
+                        <div class="cs-label">Publications</div>
+                        <div class="cs-tag green">0 under review</div>
+                    </div>
+                    <div class="card-stat">
+                        <div class="cs-icon" style="background: rgba(255, 255, 255, 0.05); color: #fff;"><span style="font-weight: 700;">Rs</span></div>
+                        <div class="cs-val">Pending</div>
+                        <div class="cs-label">Stipend status</div>
+                        <div class="cs-tag gray">Not started</div>
+                    </div>
+                </div>
+
+                <!-- THESIS JOURNEY (EXAPNDED) -->
+                <div class="panel" style="margin-bottom: 2rem; background: #0b0c10; border: 1px solid rgba(255,255,255,0.03);">
+                    <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="font-size: 1rem; font-weight: 600;">Thesis journey</h3>
+                        <span id="journeyPercent" style="font-size: 0.85rem; opacity:0.6;">0% complete</span>
+                    </div>
+                    <div class="journey-track" style="height: 4px; background: rgba(255,255,255,0.05); margin: 1.5rem 0; border-radius: 2px;">
+                        <div class="journey-fill" id="pbFill" style="width: 0%; height: 100%; background: #0ea5e9; border-radius: 2px;"></div>
+                    </div>
+                    <div class="journey-steps" style="display: flex; justify-content: space-between;">
+                        <div class="j-step active">
+                            <div class="j-label" style="font-size: 0.75rem; color: #f59e0b; font-weight: 600;">Coursework &rarr;</div>
+                        </div>
+                        <div class="j-step">
+                            <div class="j-label" style="font-size: 0.75rem; opacity: 0.5;">Proposal</div>
+                        </div>
+                        <div class="j-step">
+                            <div class="j-label" style="font-size: 0.75rem; opacity: 0.5;">Synopsis</div>
+                        </div>
+                        <div class="j-step">
+                            <div class="j-label" style="font-size: 0.75rem; opacity: 0.5;">Seminar</div>
+                        </div>
+                        <div class="j-step">
+                            <div class="j-label" style="font-size: 0.75rem; opacity: 0.5;">Submission</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHARTS GRID -->
+                <div class="dash-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                    <div class="panel" style="background: #0b0c10; border: 1px solid rgba(255,255,255,0.03);">
+                        <div class="panel-header" style="margin-bottom: 1rem;">
+                            <h3 style="font-size: 1rem; font-weight: 600;">Completed vs Pending</h3>
+                        </div>
+                        <div id="barChart"></div>
+                    </div>
+                    <div class="panel" style="background: #0b0c10; border: 1px solid rgba(255,255,255,0.03);">
+                        <div class="panel-header" style="margin-bottom: 1rem;">
+                            <h3 style="font-size: 1rem; font-weight: 600;">Status Distribution</h3>
+                        </div>
+                        <div id="donutChart" style="display:flex; justify-content:center;"></div>
+                    </div>
+                </div>
+
+                <!-- BOTTOM GRID -->
+                <div class="dash-grid" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem;">
+                    <div class="panel" style="background: #0b0c10; border: 1px solid rgba(255,255,255,0.03);">
+                        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                            <h3 style="font-size: 1rem; font-weight: 600;">Recent Activity</h3>
+                            <i class="fas fa-history" style="opacity: 0.4;"></i>
+                        </div>
+                        <div id="activityLog" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 4rem 1rem; opacity: 0.3;">
+                            <i class="fas fa-bars" style="font-size: 1.25rem; margin-bottom: 0.8rem;"></i>
+                            <p style="font-size: 0.85rem;">No recent activity</p>
+                        </div>
+                    </div>
+
+                    <div class="panel" style="background: #0b0c10; border: 1px solid rgba(255,255,255,0.03);">
+                        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                            <h3 style="font-size: 1rem; font-weight: 600;">Upcoming Meetings</h3>
+                            <a href="#" class="panel-link" style="font-size: 0.8rem; color: #38bdf8;">Calendar &rarr;</a>
+                        </div>
+                        <div id="meetingsList" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 4rem 1rem; opacity: 0.3;">
+                            <i class="fas fa-calendar-alt" style="font-size: 1.25rem; margin-bottom: 0.8rem; color: #22d3ee;"></i>
+                            <p style="font-size: 0.85rem;">No upcoming meetings</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-top: 1.5rem; background: #0b0c10; border: 1px solid rgba(255,255,255,0.03);">
+                   <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                       <h3 style="font-size: 1rem; font-weight: 600;">Current Milestones</h3>
+                       <a href="milestones.html" class="panel-link" style="font-size: 0.8rem; color: #38bdf8;">All &rarr;</a>
+                   </div>
+                </div>
+            </div>
+
+            <button class="fab-btn" onclick="location.href='messages.html'"><i class="fas fa-plus"></i></button>
+        </main>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/nav.js"></script>
+    <script>
+        const user = requireAuth('scholar');
+        
+        if (user) {
+            // Set welcome name immediately
+            document.getElementById('welcomeName').textContent = (user.name || 'Scholar').split(' ')[0];
+            renderSidebar('scholar-dashboard.html');
+            loadData();
+        }
+
+        async function loadData() {
+            try {
+                const scholar = await apiGet(`/scholar/${user.scholar_id}`);
+                
+                // Set Header Info
+                const now = new Date();
+                const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                const h = now.getHours();
+                const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+                document.querySelector('.page-title').innerHTML = `${greet}, <span class="text-gradient">${scholar.first_name || user.name?.split(' ')[0] || 'Scholar'}</span>! 👋`;
+                document.getElementById('headerContext').innerHTML = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()} &middot; Supervisor: ${scholar.supervisor_name || 'Not assigned'}`;
+
+                // Milestones
+                const milestones = await apiGet(`/milestones/${scholar.id}`);
+                const done = milestones.filter(m => m.status === 'completed').length;
+                const upcoming = milestones.filter(m => m.status === 'pending' || m.status === 'in_progress').length;
+                const progress = milestones.length ? Math.round((done / milestones.length) * 100) : 0;
+                
+                document.getElementById('milestonesCount').textContent = `${done}/${milestones.length}`;
+                document.querySelector('.cs-tag.orange').textContent = `${upcoming} upcoming`;
+                document.getElementById('overallProgress').textContent = scholar.progress_pct + '%';
+                document.getElementById('journeyPercent').textContent = scholar.progress_pct + '% complete';
+                document.getElementById('pbFill').style.width = scholar.progress_pct + '%';
+
+                // Highlight current thesis stage
+                const stages = ['Coursework', 'Proposal', 'Synopsis', 'Seminar', 'Submission'];
+                const currentIdx = stages.findIndex(s => s.toLowerCase() === (scholar.thesis_stage || '').toLowerCase());
+                document.querySelectorAll('.j-step').forEach((step, i) => {
+                    const label = step.querySelector('.j-label');
+                    if (i < currentIdx) {
+                        label.style.opacity = '0.6';
+                        label.style.color = '#22c55e';
+                        label.innerHTML = stages[i] + ' ✓';
+                    } else if (i === currentIdx) {
+                        label.style.opacity = '1';
+                        label.style.color = '#f59e0b';
+                        label.style.fontWeight = '600';
+                        label.innerHTML = stages[i] + ' →';
+                    }
+                });
+
+                // ApexCharts Render
+                const pending = milestones.filter(m => m.status === 'pending').length;
+                
+                // 1. Bar Chart
+                const barOptions = {
+                    series: [{ name: 'Milestones', data: [done, upcoming - pending, pending] }], // done, in progress, pending
+                    chart: { type: 'bar', height: 260, toolbar: { show: false }, background: 'transparent' },
+                    colors: ['#22c55e'], 
+                    plotOptions: { bar: { borderRadius: 6, columnWidth: '40%' } },
+                    dataLabels: { enabled: false },
+                    xaxis: { 
+                        categories: ['Completed', 'In Progress', 'Pending'],
+                        labels: { style: { colors: '#94a3b8' } },
+                        axisBorder: { show: false },
+                        axisTicks: { show: false }
+                    },
+                    yaxis: { labels: { style: { colors: '#94a3b8' } } },
+                    grid: { borderColor: 'rgba(255,255,255,0.05)', strokeDashArray: 4, position: 'back' },
+                    theme: { mode: 'dark' }
+                };
+                new ApexCharts(document.querySelector("#barChart"), barOptions).render();
+
+                // 2. Donut Chart
+                const donutOptions = {
+                    series: [done, upcoming - pending, pending],
+                    labels: ['Completed', 'In Progress', 'Pending'],
+                    chart: { type: 'donut', height: 280, background: 'transparent' },
+                    colors: ['#22c55e', '#f59e0b', '#64748b'],
+                    plotOptions: { donut: { size: '75%' } },
+                    dataLabels: { enabled: false },
+                    stroke: { show: false },
+                    legend: { position: 'bottom', labels: { colors: '#94a3b8' } },
+                    theme: { mode: 'dark' }
+                };
+                new ApexCharts(document.querySelector("#donutChart"), donutOptions).render();
+
+
+
+                // Publications
+                const pubs = await apiGet(`/publications/${scholar.id}`);
+                const underReview = pubs.filter(p => p.status === 'under_review').length;
+                document.getElementById('publicationsCount').textContent = pubs.length;
+                document.querySelector('.cs-tag.green').textContent = `${underReview} under review`;
+
+                // Meetings
+                try {
+                    const meetings = await apiGet(`/meetings/scholar/${scholar.id}`);
+                    const upcoming_meetings = meetings.filter(m => m.status === 'scheduled');
+                    const ml = document.getElementById('meetingsList');
+                    if (upcoming_meetings.length) {
+                        ml.style.opacity = '1';
+                        ml.style.alignItems = 'stretch';
+                        ml.style.justifyContent = 'flex-start';
+                        ml.innerHTML = upcoming_meetings.slice(0, 3).map(m => `
+                            <div class="activity-item">
+                                <div class="act-icon" style="background:rgba(34,211,238,0.1);color:#22d3ee">📅</div>
+                                <div class="act-text">
+                                    <p>${m.title}</p>
+                                    <span>${formatDate(m.scheduled_at)}</span>
+                                </div>
+                            </div>`).join('');
+                    }
+                } catch(e) {}
+
+                // Activity Log
+                try {
+                    const notifs = await apiGet(`/notifications/${user.id}`);
+                    const items = notifs.notifications || [];
+                    const al = document.getElementById('activityLog');
+                    if (items.length) {
+                        al.style.opacity = '1';
+                        al.style.alignItems = 'stretch';
+                        al.style.justifyContent = 'flex-start';
+                        al.style.padding = '0';
+                        const iconMap = { leave_approval:'📋', publication:'📄', meeting:'📅', supervisor_request:'🎓', message:'💬', milestone:'🏁' };
+                        al.innerHTML = items.slice(0, 5).map(n => `
+                            <div class="activity-item">
+                                <div class="act-icon">${iconMap[n.type] || '🔔'}</div>
+                                <div class="act-text">
+                                    <p>${n.message}</p>
+                                    <span>${n.created_at}</span>
+                                </div>
+                            </div>`).join('');
+                    }
+                } catch(e) {}
+
+            } catch(e) { console.error(e); }
+        }
+    </script>
+</body>
+</html>

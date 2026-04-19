@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Approvals — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .tab-bar { display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap; }
+        .tab-btn {
+            padding:0.5rem 1.25rem; border-radius:20px; border:1px solid var(--border);
+            background:transparent; color:var(--text-muted); font-size:0.85rem; font-weight:600;
+            cursor:pointer; font-family:'Outfit',sans-serif; transition:all 0.2s;
+        }
+        .tab-btn.active { background:var(--primary); color:#000; border-color:var(--primary); }
+        .tab-btn:not(.active):hover { border-color:var(--primary); color:var(--primary); }
+        .history-badge {
+            display:inline-block; padding:2px 8px; border-radius:999px; font-size:0.72rem; font-weight:700; margin-left:0.4rem;
+        }
+        .hb-pending  { background:rgba(245,158,11,0.15); color:#f59e0b; }
+        .hb-approved { background:rgba(34,197,94,0.15);  color:#22c55e; }
+        .hb-rejected { background:rgba(239,68,68,0.15);  color:#ef4444; }
+        .hb-all      { background:rgba(99,102,241,0.15); color:#a5b4fc; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body animate-in">
+            <div class="header-row">
+                <div>
+                    <h1>Leave Approvals</h1>
+                    <p>Review and manage your scholars' leave applications</p>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tab-pending"  onclick="setFilter('pending',  this)">
+                    <i class="fas fa-clock" style="margin-right:0.4rem"></i>Pending
+                    <span class="history-badge hb-pending" id="cnt-pending">0</span>
+                </button>
+                <button class="tab-btn" id="tab-approved" onclick="setFilter('approved', this)">
+                    <i class="fas fa-check-circle" style="margin-right:0.4rem"></i>Approved
+                    <span class="history-badge hb-approved" id="cnt-approved">0</span>
+                </button>
+                <button class="tab-btn" id="tab-rejected" onclick="setFilter('rejected', this)">
+                    <i class="fas fa-times-circle" style="margin-right:0.4rem"></i>Rejected
+                    <span class="history-badge hb-rejected" id="cnt-rejected">0</span>
+                </button>
+                <button class="tab-btn" id="tab-all"      onclick="setFilter('all',      this)">
+                    All History
+                    <span class="history-badge hb-all" id="cnt-all">0</span>
+                </button>
+            </div>
+
+            <div id="leaveTable">
+                <div class="empty-state">Loading...</div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const user = requireAuth(['supervisor','faculty']);
+let currentFilter = 'pending';
+let supervisorId = null;
+let ALL_LEAVES = [];
+
+const thStyle = "padding:0.75rem;text-align:left;font-size:0.78rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.04em";
+
+async function init() {
+    renderSidebar('sup-leave.html');
+    supervisorId = user.supervisor_id || user.id;
+    await loadLeaves();
+}
+
+function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderLeaves();
+}
+
+async function loadLeaves() {
+    const container = document.getElementById('leaveTable');
+    container.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin" style="margin-right:0.5rem"></i>Loading...</div>`;
+    try {
+        // Fetch ALL leaves (not just pending) so history works
+        ALL_LEAVES = await apiGet(`/supervisor/${supervisorId}/leave-requests`);
+        updateCounts();
+        renderLeaves();
+    } catch(e) {
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:#f59e0b;margin-right:0.5rem"></i>Failed to load leave requests</div>`;
+    }
+}
+
+function updateCounts() {
+    document.getElementById('cnt-pending').textContent  = ALL_LEAVES.filter(l=>l.status==='pending').length;
+    document.getElementById('cnt-approved').textContent = ALL_LEAVES.filter(l=>l.status==='approved').length;
+    document.getElementById('cnt-rejected').textContent = ALL_LEAVES.filter(l=>l.status==='rejected').length;
+    document.getElementById('cnt-all').textContent      = ALL_LEAVES.length;
+}
+
+function renderLeaves() {
+    const container = document.getElementById('leaveTable');
+    const data = currentFilter === 'all' ? ALL_LEAVES : ALL_LEAVES.filter(l => l.status === currentFilter);
+
+    if (!data.length) {
+        const msgs = { pending:'No pending leave requests — all caught up! ✅', approved:'No approved leaves on record.', rejected:'No rejected leaves on record.', all:'No leave requests found.' };
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-check-double" style="font-size:2.5rem;opacity:0.2;display:block;margin-bottom:1rem"></i>${msgs[currentFilter]}</div>`;
+        return;
+    }
+
+    container.innerHTML = `<div class="panel"><table style="width:100%;border-collapse:collapse">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="${thStyle}">Scholar</th>
+            <th style="${thStyle}">Type</th>
+            <th style="${thStyle}">Date Range</th>
+            <th style="${thStyle}">Days</th>
+            <th style="${thStyle}">Reason</th>
+            <th style="${thStyle}">Status</th>
+            <th style="${thStyle}">Actions</th>
+        </tr></thead>
+        <tbody>
+            ${data.map(l => {
+                const days = calcDays(l.from_date, l.to_date);
+                const reviewedInfo = l.reviewed_at ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem">Reviewed: ${fmtDate(l.reviewed_at)}</div>` : '';
+                return `
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.03);transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding:1rem 0.75rem">
+                        <div style="font-weight:600">${l.scholar_name}</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem">Applied: ${fmtDate(l.created_at)}</div>
+                    </td>
+                    <td style="padding:1rem 0.75rem">
+                        <span style="font-size:0.82rem;color:var(--text-muted)">${l.leave_type || 'Personal'}</span>
+                    </td>
+                    <td style="padding:1rem 0.75rem;font-size:0.85rem">
+                        <div>${fmtDate(l.from_date)}</div>
+                        <div style="color:var(--text-muted);font-size:0.78rem">to ${fmtDate(l.to_date)}</div>
+                    </td>
+                    <td style="padding:1rem 0.75rem;font-size:0.85rem;font-weight:600">${days} day${days!==1?'s':''}</td>
+                    <td style="padding:1rem 0.75rem;font-size:0.82rem;color:var(--text-muted);max-width:200px">${(l.reason||'').substring(0,80)}${l.reason&&l.reason.length>80?'…':''}</td>
+                    <td style="padding:1rem 0.75rem">
+                        <span class="badge ${badgeClass(l.status)}">${l.status.charAt(0).toUpperCase()+l.status.slice(1)}</span>
+                        ${reviewedInfo}
+                    </td>
+                    <td style="padding:1rem 0.75rem">
+                        ${l.status === 'pending' ? `
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                            <button onclick="reviewLeave(${l.id},'approved')" style="padding:0.45rem 0.85rem;border-radius:8px;border:1px solid #22c55e;background:rgba(34,197,94,0.08);color:#22c55e;cursor:pointer;font-size:0.78rem;font-weight:600;font-family:'Outfit',sans-serif">
+                                ✓ Approve
+                            </button>
+                            <button onclick="reviewLeave(${l.id},'rejected')" style="padding:0.45rem 0.85rem;border-radius:8px;border:1px solid #ef4444;background:rgba(239,68,68,0.08);color:#ef4444;cursor:pointer;font-size:0.78rem;font-weight:600;font-family:'Outfit',sans-serif">
+                                ✕ Reject
+                            </button>
+                        </div>` : `<span style="font-size:0.82rem;color:var(--text-muted);font-style:italic">Reviewed</span>`}
+                    </td>
+                </tr>`
+            }).join('')}
+        </tbody>
+    </table></div>`;
+}
+
+async function reviewLeave(id, action) {
+    try {
+        await apiPut(`/supervisor/leave/${id}/review`, { status: action });
+        const label = action === 'approved' ? '✅ Approved' : '❌ Rejected';
+        toast(`${label} — attendance updated automatically`);
+        await loadLeaves();
+    } catch(e) {
+        toast('Action failed — please try again', 'error');
+    }
+}
+
+function calcDays(from, to) {
+    if (!from || !to) return 1;
+    const ms = new Date(to) - new Date(from);
+    return Math.max(1, Math.round(ms / 86400000) + 1);
+}
+
+function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'});
+}
+
+init();
+</script>
+</body>
+</html>

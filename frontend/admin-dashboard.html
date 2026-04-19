@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <style>
+        /* Admin-specific overrides */
+        .admin-sidebar {
+            width: 260px; min-width: 260px;
+            background: #08090f;
+            border-right: 1px solid rgba(255,255,255,0.05);
+            display: flex; flex-direction: column;
+            padding: 1.5rem 1rem;
+        }
+        .admin-brand {
+            display: flex; align-items: center; gap: 0.85rem;
+            margin-bottom: 2rem; padding: 0.25rem 0.5rem;
+        }
+        .admin-brand-icon {
+            width: 42px; height: 42px; border-radius: 12px;
+            background: linear-gradient(135deg, #7b2fff, #00d4ff);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 1.1rem;
+        }
+        .admin-brand-name { font-weight: 800; font-size: 1rem; color: #fff; line-height:1.2; }
+        .admin-brand-sub  { font-size: 0.68rem; color: rgba(255,255,255,0.4); font-weight: 500; }
+
+        .admin-nav { flex: 1; display: flex; flex-direction: column; gap: 0.2rem; }
+        .admin-nav-link {
+            display: flex; align-items: center; gap: 0.8rem;
+            padding: 0.65rem 1rem; border-radius: 10px;
+            color: rgba(255,255,255,0.45); text-decoration: none;
+            font-size: 0.875rem; font-weight: 500; transition: all 0.2s;
+            cursor: pointer; border: none; background: none; width: 100%;
+            font-family: 'Outfit', sans-serif;
+        }
+        .admin-nav-link i { width: 18px; text-align: center; font-size: 0.9rem; }
+        .admin-nav-link:hover { background: rgba(255,255,255,0.04); color: #fff; }
+        .admin-nav-link.active { background: rgba(0, 212, 255, 0.08); color: #00d4ff; font-weight: 600; border-left: 2px solid #00d4ff; }
+        .admin-nav-link .nav-badge {
+            margin-left: auto; min-width: 20px; height: 20px;
+            border-radius: 50%; background: #ef4444; color: #fff;
+            font-size: 0.68rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .admin-footer { padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); }
+
+        /* Sections */
+        .admin-section { display: none; }
+        .admin-section.visible { display: block; }
+
+        /* Live feed card */
+        .feed-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .feed-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            font-weight: 700; font-size: 0.95rem;
+        }
+        .feed-item {
+            display: flex; align-items: flex-start; gap: 1rem;
+            padding: 1rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.03);
+            transition: background 0.15s;
+        }
+        .feed-item:last-child { border-bottom: none; }
+        .feed-item:hover { background: rgba(255,255,255,0.02); }
+        .feed-emoji { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
+        .feed-body { flex: 1; min-width: 0; }
+        .feed-body p { font-size: 0.88rem; color: #e2e8f0; margin: 0 0 0.2rem; line-height: 1.4; }
+        .feed-body small { font-size: 0.72rem; color: var(--text-muted); }
+
+        /* User table */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+        .data-table td { padding: 0.9rem 1rem; font-size: 0.875rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: rgba(255,255,255,0.01); }
+
+        /* Status badge inline */
+        .status-pill {
+            display: inline-block; padding: 0.3rem 0.75rem;
+            border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+        }
+        .pill-active   { background: rgba(34,197,94,0.1);  color: #4ade80; }
+        .pill-pending  { background: rgba(245,158,11,0.1); color: #fbbf24; }
+        .pill-rejected { background: rgba(239,68,68,0.1);  color: #f87171; }
+
+        /* Action chip */
+        .action-chip {
+            display: inline-flex; gap: 0.5rem;
+        }
+        .chip-btn {
+            padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.78rem;
+            font-weight: 600; cursor: pointer; border: none; font-family: 'Outfit',sans-serif;
+            transition: 0.15s;
+        }
+        .chip-approve { background: rgba(34,197,94,0.12); color: #4ade80; }
+        .chip-reject  { background: rgba(239,68,68,0.12);  color: #f87171; }
+        .chip-approve:hover { background: rgba(34,197,94,0.25); }
+        .chip-reject:hover  { background: rgba(239,68,68,0.25); }
+
+        /* Section header */
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .section-header h1 { font-size: 1.75rem; font-weight: 700; }
+        .section-header p { color: var(--text-muted); font-size: 0.875rem; margin-top: 0.2rem; }
+
+        /* 4-col stats */
+        .stats-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem; }
+        @media (max-width: 1200px) { .stats-4 { grid-template-columns: repeat(2, 1fr); } }
+
+        .s-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 1.25rem 1.5rem;
+            position: relative; overflow: hidden;
+        }
+        .s-card-accent { position: absolute; top: 0; left: 0; width: 3px; height: 100%; }
+        .s-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-bottom: 0.75rem; }
+        .s-val  { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 0.3rem; }
+        .s-lbl  { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+
+    <!-- ══ ADMIN SIDEBAR ══ -->
+    <aside class="admin-sidebar sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon"><i class="fas fa-layer-group"></i></div>
+            <div>
+                <div class="brand-name">ResearchHub <span style="color:#4ade80;font-size:0.7rem;font-weight:700">v3.5</span></div>
+                <div class="brand-sub">System Management</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav">
+            <button class="admin-nav-link active" onclick="showSection('overview', this)"><i class="fas fa-grid-2"></i> Overview</button>
+            <button class="admin-nav-link" onclick="showSection('scholars', this)"><i class="fas fa-user-graduate"></i> Scholar Management</button>
+            <button class="admin-nav-link" onclick="showSection('faculty', this)"><i class="fas fa-chalkboard-teacher"></i> Faculty Management</button>
+            <button class="admin-nav-link" onclick="showSection('leaves', this)">
+                <i class="fas fa-calendar-check"></i> Leave Requests
+                <span class="nav-badge" id="leaveBadge" style="display:none">0</span>
+            </button>
+            <button class="admin-nav-link" onclick="showSection('svrequests', this)">
+                <i class="fas fa-user-plus"></i> Supervisor Requests
+                <span class="nav-badge" id="svBadge" style="display:none">0</span>
+            </button>
+            <button class="admin-nav-link" onclick="showSection('notifications', this)"><i class="fas fa-bell"></i> Live Activity Feed</button>
+        </nav>
+
+        <div class="admin-footer">
+            <div class="user-info" style="margin-bottom:0.75rem">
+                <div class="u-avatar" style="background:linear-gradient(135deg,#7b2fff,#00d4ff);font-size:0.8rem">AD</div>
+                <div class="u-details">
+                    <div class="u-name">Administrator</div>
+                    <div class="u-role">System Control</div>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Sign Out</span></button>
+        </div>
+    </aside>
+
+    <!-- ══ MAIN CONTENT ══ -->
+    <main class="main-wrapper">
+        <div class="content-body animate-in">
+
+            <!-- ── OVERVIEW ── -->
+            <div id="section-overview" class="admin-section visible">
+                <div class="section-header">
+                    <div><h1>System Overview</h1><p>Real-time platform analytics and pending actions</p></div>
+                    <div style="display:flex; align-items:center; gap:1.25rem">
+                        <div id="top-notif-container"></div>
+                        <button onclick="loadAll()" style="padding:0.6rem 1.2rem;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-size:0.85rem;font-family:'Outfit',sans-serif">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-4" id="statsGrid">
+                    <div class="s-card"><div class="s-card-accent" style="background:#00d4ff"></div><div class="s-icon" style="background:rgba(0,212,255,0.1);color:#00d4ff"><i class="fas fa-user-graduate"></i></div><div class="s-val" id="stScholars">—</div><div class="s-lbl">Total Scholars</div></div>
+                    <div class="s-card"><div class="s-card-accent" style="background:#7b2fff"></div><div class="s-icon" style="background:rgba(123,47,255,0.1);color:#a78bfa"><i class="fas fa-chalkboard-teacher"></i></div><div class="s-val" id="stFaculty">—</div><div class="s-lbl">Total Faculty</div></div>
+                    <div class="s-card"><div class="s-card-accent" style="background:#f59e0b"></div><div class="s-icon" style="background:rgba(245,158,11,0.1);color:#fbbf24"><i class="fas fa-clock"></i></div><div class="s-val" id="stLeaves">—</div><div class="s-lbl">Pending Leaves</div></div>
+                    <div class="s-card"><div class="s-card-accent" style="background:#22c55e"></div><div class="s-icon" style="background:rgba(34,197,94,0.1);color:#4ade80"><i class="fas fa-user-plus"></i></div><div class="s-val" id="stSvReqs">—</div><div class="s-lbl">Supervisor Requests</div></div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem">
+                    <div class="panel"><div class="panel-head"><h3>User Growth</h3></div><div id="growthChart"></div></div>
+                    <div class="panel"><div class="panel-head"><h3>Role Distribution</h3></div><div id="roleChart" style="display:flex;align-items:center;justify-content:center"></div></div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+                    <!-- Pending Leaves Quick View -->
+                    <div class="feed-card">
+                        <div class="feed-header"><span>⏳ Pending Leave Requests</span><button onclick="showSection('leaves', document.querySelector('.admin-nav-link:nth-child(4)'))" style="font-size:0.78rem;color:var(--primary);background:none;border:none;cursor:pointer">View all →</button></div>
+                        <div id="overviewLeaves"><div class="feed-item"><span style="opacity:0.4;font-size:0.85rem">Loading...</span></div></div>
+                    </div>
+                    <!-- Live Activity Feed -->
+                    <div class="feed-card">
+                        <div class="feed-header"><span>🔔 Live Activity</span><button onclick="loadActivity()" style="font-size:0.78rem;color:var(--primary);background:none;border:none;cursor:pointer"><i class="fas fa-sync-alt"></i></button></div>
+                        <div id="activityFeed"><div class="feed-item"><span style="opacity:0.4;font-size:0.85rem">Loading...</span></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── SCHOLARS ── -->
+            <div id="section-scholars" class="admin-section">
+                <div class="section-header"><div><h1>Scholar Management</h1><p>View and manage all registered scholars</p></div></div>
+                <div class="panel" style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>Enrollment ID</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody id="scholarTable"><tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── FACULTY ── -->
+            <div id="section-faculty" class="admin-section">
+                <div class="section-header"><div><h1>Faculty Management</h1><p>View and manage all registered faculty members</p></div></div>
+                <div class="panel" style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Scholars</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody id="facultyTable"><tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── LEAVE REQUESTS ── -->
+            <div id="section-leaves" class="admin-section">
+                <div class="section-header">
+                    <div><h1>Leave Requests</h1><p>Review and action all pending leave applications</p></div>
+                    <div style="display:flex;gap:0.5rem">
+                        <button onclick="loadLeaves('pending')" style="padding:0.5rem 1rem;border-radius:8px;border:1px solid var(--primary);background:rgba(0,212,255,0.08);color:var(--primary);cursor:pointer;font-size:0.82rem;font-family:'Outfit',sans-serif">Pending</button>
+                        <button onclick="loadLeaves('approved')" style="padding:0.5rem 1rem;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-size:0.82rem;font-family:'Outfit',sans-serif">Approved</button>
+                        <button onclick="loadLeaves('rejected')" style="padding:0.5rem 1rem;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-size:0.82rem;font-family:'Outfit',sans-serif">Rejected</button>
+                    </div>
+                </div>
+                <div class="panel" style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead><tr><th>Scholar</th><th>Type</th><th>From</th><th>To</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody id="leaveTable"><tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── SUPERVISOR REQUESTS ── -->
+            <div id="section-svrequests" class="admin-section">
+                <div class="section-header"><div><h1>Supervisor Requests</h1><p>Approve or reject scholar-to-supervisor assignment requests</p></div></div>
+                <div class="panel" style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead><tr><th>Scholar</th><th>Requested Supervisor</th><th>Sent On</th><th>Actions</th></tr></thead>
+                        <tbody id="svReqTable"><tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── NOTIFICATIONS / ACTIVITY ── -->
+            <div id="section-notifications" class="admin-section">
+                <div class="section-header"><div><h1>Live Activity Feed</h1><p>All system events — messages, requests, approvals, and more</p></div><button onclick="loadActivity()" style="padding:0.6rem 1.2rem;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-size:0.85rem;font-family:'Outfit',sans-serif"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+
+                <!-- Summary stats for activity -->
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:2rem" id="activityStats"></div>
+
+                <div class="feed-card">
+                    <div class="feed-header"><span>All System Notifications</span><span id="notifCount" style="font-size:0.8rem;color:var(--text-muted);font-weight:400">Loading...</span></div>
+                    <div id="fullActivityFeed"></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    window.onload = () => {
+        const user = requireAuth('admin');
+        if (!user) return;
+        document.body.className = 'portal-admin';
+        
+        // Render notification bell if nav.js is loaded
+        if (typeof renderTopBell === 'function') renderTopBell();
+        if (typeof initNotifications === 'function') initNotifications();
+        
+        loadAll();
+    };
+
+    /**
+     * showSection — switches between dashboard tabs
+     */
+    function showSection(id, btn) {
+        document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('visible'));
+        const target = document.getElementById('section-' + id);
+        if (target) target.classList.add('visible');
+
+        document.querySelectorAll('.admin-nav-link').forEach(l => l.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        
+        // Specific loaders
+        if (id === 'scholars') loadScholars();
+        if (id === 'faculty') loadFaculty();
+        if (id === 'leaves') loadLeaves();
+        if (id === 'svrequests') loadSvRequests();
+        if (id === 'notifications') loadActivity();
+    }
+
+    // ── Load all on init ──
+    async function loadAll() {
+        try {
+            const stats = await apiGet('/admin/stats');
+            document.getElementById('stScholars').textContent = stats.scholars;
+            document.getElementById('stFaculty').textContent  = stats.faculty;
+            document.getElementById('stLeaves').textContent   = stats.pending_leaves;
+            document.getElementById('stSvReqs').textContent   = stats.pending_reqs;
+
+            // Badges in sidebar
+            const lb = document.getElementById('leaveBadge');
+            const sb = document.getElementById('svBadge');
+            if (stats.pending_leaves > 0) { lb.style.display='flex'; lb.textContent=stats.pending_leaves; }
+            if (stats.pending_reqs > 0)   { sb.style.display='flex'; sb.textContent=stats.pending_reqs;   }
+
+            // Charts
+            const growth = await apiGet('/admin/growth-data');
+            new ApexCharts(document.getElementById('growthChart'), {
+                series: [{ name: 'Scholars', data: growth.scholars }, { name: 'Faculty', data: growth.faculty }],
+                chart: { type: 'area', height: 240, toolbar: { show: false }, background: 'transparent' },
+                colors: ['#00d4ff', '#7b2fff'],
+                dataLabels: { enabled: false },
+                stroke: { curve: 'smooth', width: 2 },
+                fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.02 } },
+                xaxis: { categories: growth.labels, axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: '#64748b' } } },
+                grid: { borderColor: 'rgba(255,255,255,0.04)', strokeDashArray: 4 },
+                legend: { labels: { colors: '#94a3b8' } },
+                theme: { mode: 'dark' },
+            }).render();
+
+            const roles = await apiGet('/admin/role-data');
+            new ApexCharts(document.getElementById('roleChart'), {
+                series: roles.series, labels: roles.labels,
+                chart: { type: 'donut', height: 240, background: 'transparent' },
+                colors: ['#00d4ff', '#7b2fff', '#f59e0b'],
+                legend: { position: 'bottom', labels: { colors: '#94a3b8' } },
+                dataLabels: { enabled: false },
+                stroke: { show: false },
+                plotOptions: { pie: { donut: { size: '70%' } } },
+                theme: { mode: 'dark' },
+            }).render();
+
+            // Overview quick panels
+            loadOverviewLeaves();
+            loadActivity();
+
+        } catch(e) { console.error('Admin stats error:', e); }
+    }
+
+    // ── Overview Leaves quick panel ──
+    async function loadOverviewLeaves() {
+        const c = document.getElementById('overviewLeaves');
+        try {
+            const leaves = await apiGet('/admin/leave-requests?status=pending');
+            if (!leaves.length) { c.innerHTML = `<div class="feed-item"><span style="opacity:0.4;font-size:0.85rem">No pending leaves 🎉</span></div>`; return; }
+            c.innerHTML = leaves.slice(0,5).map(l => `
+                <div class="feed-item">
+                    <div class="feed-emoji">📋</div>
+                    <div class="feed-body">
+                        <p><strong>${l.scholar_name}</strong> — ${l.leave_type} leave</p>
+                        <small>${l.from_date} to ${l.to_date}</small>
+                    </div>
+                    <div class="action-chip">
+                        <button class="chip-btn chip-approve" onclick="adminReviewLeave(${l.id},'approved')">✓</button>
+                        <button class="chip-btn chip-reject"  onclick="adminReviewLeave(${l.id},'rejected')">✕</button>
+                    </div>
+                </div>`).join('');
+        } catch(e) { c.innerHTML = `<div class="feed-item"><span style="color:#ef4444;font-size:0.85rem">Failed to load</span></div>`; }
+    }
+
+    // ── Activity Feed ──
+    async function loadActivity() {
+        const c = document.getElementById('activityFeed');
+        const fc = document.getElementById('fullActivityFeed');
+        const ac = document.getElementById('activityStats');
+        try {
+            // Fetch all data in parallel
+            const [activities, stats] = await Promise.all([
+                apiGet('/admin/activity-feed'),
+                apiGet('/admin/stats'),
+            ]);
+
+            // Activity stats row (full page only)
+            if (ac) {
+                ac.innerHTML = [
+                    { icon:'📋', label:'Pending Leaves',   val: stats.pending_leaves, color:'#fbbf24' },
+                    { icon:'🎓', label:'SV Requests',       val: stats.pending_reqs,   color:'#a78bfa' },
+                    { icon:'📄', label:'Pub Reviews',        val: stats.pending_pub_reviews || 0, color:'#00d4ff' },
+                    { icon:'👩‍🎓', label:'Total Scholars',   val: stats.scholars,   color:'#4ade80' },
+                    { icon:'👨‍🏫', label:'Total Faculty',    val: stats.faculty,    color:'#f472b6' },
+                ].map(s => `
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;text-align:center">
+                        <div style="font-size:1.5rem;margin-bottom:0.3rem">${s.icon}</div>
+                        <div style="font-size:1.5rem;font-weight:800;color:${s.color}">${s.val}</div>
+                        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem">${s.label}</div>
+                    </div>`).join('');
+            }
+
+            const renderList = (target, items, withActions) => {
+                if (!items.length) {
+                    target.innerHTML = `<div class="feed-item"><span style="opacity:0.4;font-size:0.85rem">No recent activity</span></div>`;
+                    return;
+                }
+                target.innerHTML = items.map(a => `
+                    <div class="feed-item">
+                        <div class="feed-emoji">${a.emoji}</div>
+                        <div class="feed-body">
+                            <p>${a.message}</p>
+                            <small>${new Date(a.timestamp).toLocaleString('en-IN', {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</small>
+                        </div>
+                        ${withActions ? `
+                        <div class="action-chip">
+                            ${a.type==='leave' ? `
+                                <button class="chip-btn chip-approve" onclick="adminReviewLeave(${a.id},'approved')">✓ Approve</button>
+                                <button class="chip-btn chip-reject"  onclick="adminReviewLeave(${a.id},'rejected')">✕ Reject</button>
+                            ` : a.type==='supervisor_request' ? `
+                                <button class="chip-btn chip-approve" onclick="adminSvReq(${a.id},'accepted')">✓ Accept</button>
+                                <button class="chip-btn chip-reject"  onclick="adminSvReq(${a.id},'rejected')">✕ Reject</button>
+                            ` : ''}
+                        </div>` : ''}
+                    </div>`).join('');
+            };
+
+            if (c)  renderList(c,  activities.slice(0,5), false);
+            if (fc) {
+                document.getElementById('notifCount').textContent = `${activities.length} pending items`;
+                renderList(fc, activities, true);
+            }
+
+        } catch(e) { console.error('Activity feed error:', e); }
+    }
+
+    // ── Scholar Table ──
+    async function loadScholars() {
+        const tb = document.getElementById('scholarTable');
+        try {
+            const scholars = await apiGet('/admin/scholars');
+            tb.innerHTML = scholars.map(s => `
+                <tr>
+                    <td><strong>${s.name}</strong><div style="font-size:0.75rem;color:var(--text-muted)">${s.email}</div></td>
+                    <td style="color:var(--text-muted)">${s.enrollment_id || '—'}</td>
+                    <td>${s.department || '—'}</td>
+                    <td>
+                        <span class="status-pill ${s.status==='Active'?'pill-active':(s.status==='Suspended'?'pill-pending':'pill-rejected')}">${s.status}</span>
+                        ${s.status === 'Suspended' && s.suspended_until ? `<div style="font-size:0.65rem; color:#f87171; margin-top:2px">Until: ${s.suspended_until}</div>` : ''}
+                    </td>
+                    <td>
+                        <div class="action-chip">
+                            ${s.status==='Active'
+                                ? `<button class="chip-btn chip-reject" onclick="setStatus(${s.user_id},'Suspended',this)">Suspend</button>`
+                                : `<button class="chip-btn chip-approve" onclick="setStatus(${s.user_id},'Active',this)">Activate</button>`}
+                        </div>
+                    </td>
+                </tr>`).join('');
+        } catch(e) { tb.innerHTML = `<tr><td colspan="5" style="color:#ef4444;text-align:center;padding:2rem">Failed to load</td></tr>`; }
+    }
+
+    // ── Faculty Table ──
+    async function loadFaculty() {
+        const tb = document.getElementById('facultyTable');
+        try {
+            const faculty = await apiGet('/admin/faculty');
+            tb.innerHTML = faculty.map(f => `
+                <tr>
+                    <td><strong>${f.name}</strong><div style="font-size:0.75rem;color:var(--text-muted)">${f.designation||'Professor'}</div></td>
+                    <td style="color:var(--text-muted)">${f.email}</td>
+                    <td>${f.department || '—'}</td>
+                    <td><span style="color:var(--primary);font-weight:600">${f.scholars}</span> scholars</td>
+                    <td>
+                        <span class="status-pill ${f.status==='Active'?'pill-active':(f.status==='Suspended'?'pill-pending':'pill-rejected')}">${f.status}</span>
+                        ${f.status === 'Suspended' && f.suspended_until ? `<div style="font-size:0.65rem; color:#f87171; margin-top:2px">Until: ${f.suspended_until}</div>` : ''}
+                    </td>
+                    <td>
+                        <div class="action-chip">
+                            ${f.status==='Active'
+                                ? `<button class="chip-btn chip-reject" onclick="setStatus(${f.user_id},'Suspended',this)">Suspend</button>`
+                                : `<button class="chip-btn chip-approve" onclick="setStatus(${f.user_id},'Active',this)">Activate</button>`}
+                        </div>
+                    </td>
+                </tr>`).join('');
+        } catch(e) { tb.innerHTML = `<tr><td colspan="6" style="color:#ef4444;text-align:center;padding:2rem">Failed to load</td></tr>`; }
+    }
+
+    // ── Leave Table ──
+    async function loadLeaves(status='pending') {
+        const tb = document.getElementById('leaveTable');
+        try {
+            const leaves = await apiGet(`/admin/leave-requests?status=${status}`);
+            if (!leaves.length) { tb.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted)">No ${status} leaves</td></tr>`; return; }
+            tb.innerHTML = leaves.map(l => `
+                <tr>
+                    <td><strong>${l.scholar_name || 'Scholar'}</strong></td>
+                    <td>${l.leave_type}</td>
+                    <td style="color:var(--text-muted)">${l.from_date}</td>
+                    <td style="color:var(--text-muted)">${l.to_date}</td>
+                    <td><span class="status-pill ${l.status==='approved'?'pill-active':l.status==='rejected'?'pill-rejected':'pill-pending'}">${l.status}</span></td>
+                    <td>
+                        ${l.status==='pending' ? `<div class="action-chip">
+                            <button class="chip-btn chip-approve" onclick="adminReviewLeave(${l.id},'approved')">✓ Approve</button>
+                            <button class="chip-btn chip-reject"  onclick="adminReviewLeave(${l.id},'rejected')">✕ Reject</button>
+                        </div>` : '<span style="color:var(--text-muted);font-size:0.8rem">Reviewed</span>'}
+                    </td>
+                </tr>`).join('');
+        } catch(e) { tb.innerHTML = `<tr><td colspan="6" style="color:#ef4444;text-align:center;padding:2rem">Failed to load</td></tr>`; }
+    }
+
+    // ── Supervisor Requests Table ──
+    async function loadSvRequests() {
+        const tb = document.getElementById('svReqTable');
+        try {
+            const reqs = await apiGet('/admin/supervisor-requests');
+            if (!reqs.length) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted)">No pending requests</td></tr>`; return; }
+            tb.innerHTML = reqs.map(r => `
+                <tr>
+                    <td><strong>${r.scholar_name}</strong></td>
+                    <td>${r.supervisor_name}</td>
+                    <td style="color:var(--text-muted)">${new Date(r.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
+                    <td><div class="action-chip">
+                        <button class="chip-btn chip-approve" onclick="adminSvReq(${r.id},'accepted')">✓ Accept</button>
+                        <button class="chip-btn chip-reject"  onclick="adminSvReq(${r.id},'rejected')">✕ Reject</button>
+                    </div></td>
+                </tr>`).join('');
+        } catch(e) { tb.innerHTML = `<tr><td colspan="4" style="color:#ef4444;text-align:center;padding:2rem">Failed to load</td></tr>`; }
+    }
+
+    // ── Actions ──
+    async function adminReviewLeave(id, action) {
+        try { await apiPut(`/admin/leave-requests/${id}/review`, { status: action }); toast(`Leave ${action}!`); loadAll(); loadOverviewLeaves(); }
+        catch(e) { toast('Action failed', 'error'); }
+    }
+    async function adminSvReq(id, action) {
+        try { await apiPut(`/admin/supervisor-requests/${id}/approve`, { status: action }); toast(`Request ${action}!`); loadAll(); }
+        catch(e) { toast('Action failed', 'error'); }
+    }
+    async function setStatus(userId, status, btn) {
+        let days = 0;
+        if (status === 'Suspended') {
+            const input = prompt("Enter suspension duration in days (0 or cancel for indefinite):", "7");
+            if (input === null) return;
+            days = parseInt(input) || 0;
+        }
+
+        try {
+            const res = await apiPut(`/admin/user/${userId}/status`, { status, days });
+            toast(`User ${status}!`);
+            
+            // Refresh table
+            const row = btn.closest('tr');
+            if (row) {
+                const pill = row.querySelector('.status-pill');
+                if (pill) {
+                    pill.textContent = status;
+                    pill.className = `status-pill ${status === 'Active' ? 'pill-active' : (status === 'Suspended' ? 'pill-pending' : 'pill-rejected')}`;
+                }
+                
+                // Show activate/suspend button correctly
+                const chip = row.querySelector('.action-chip');
+                if (chip) {
+                    chip.innerHTML = status === 'Active'
+                        ? `<button class="chip-btn chip-reject" onclick="setStatus(${userId},'Suspended',this)">Suspend</button>`
+                        : `<button class="chip-btn chip-approve" onclick="setStatus(${userId},'Active',this)">Activate</button>`;
+                }
+            }
+        } catch(e) { toast('Failed to update status', 'error'); }
+    }
+
+    // ── Toast helper (if not in api.js) ──
+    if (typeof toast === 'undefined') {
+        window.toast = function(msg, type='success') {
+            const el = document.createElement('div');
+            el.className = `toast toast-${type}`;
+            el.textContent = msg;
+            let cont = document.getElementById('toast-container');
+            if (!cont) { cont = document.createElement('div'); cont.id='toast-container'; document.body.appendChild(cont); }
+            cont.appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        };
+    }
+
+    // Auto-refresh activity every 30s
+    setInterval(loadActivity, 30000);
+</script>
+</body>
+</html>

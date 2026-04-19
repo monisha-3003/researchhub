@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResearchHub — Academic Portal</title>
+    <meta name="description" content="ResearchHub Academic Management System — Sign in to access your research portal">
+    <script src="js/api.js"></script>
+    <script>
+        // Auto-redirect based on login state
+        const user = getUser();
+        if (user) {
+            if (user.role === 'admin') {
+                window.location.replace('admin-dashboard.html');
+            } else if (user.role === 'faculty' || user.role === 'supervisor') {
+                window.location.replace('supervisor-dashboard.html');
+            } else {
+                window.location.replace('scholar-dashboard.html');
+            }
+        } else {
+            window.location.replace('login.html');
+        }
+    </script>
+</head>
+<body>
+    <p style="text-align:center;margin-top:3rem;color:#888;font-family:sans-serif">Redirecting to ResearchHub...</p>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ResearchHub — View Profile</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .profile-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .p-avatar {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; font-weight: 700; color: #fff;
+      margin: 0 auto 1.5rem auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .p-name { font-size: 1.8rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
+    .p-role { font-size: 1rem; color: var(--primary); font-weight: 500; margin-bottom: 1.5rem; }
+    
+    .p-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      text-align: left;
+      margin-top: 2rem;
+      border-top: 1px solid var(--glass-border);
+      padding-top: 2rem;
+    }
+    .p-item label {
+      display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 500;
+    }
+    .p-item div {
+      font-size: 1rem; color: #fff; background: rgba(0,0,0,0.2); padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border);
+    }
+    
+    .btn-back {
+      background: transparent; color: var(--text-muted); border: none; font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; transition: color 0.2s;
+    }
+    .btn-back:hover { color: #fff; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div id="sidebar-container"></div>
+
+  <main class="main-wrapper">
+    <div class="content-body animate-in">
+      <button class="btn-back" onclick="history.back()"><i class="fas fa-arrow-left"></i> Back</button>
+      <div class="profile-card" id="profileContent">
+        <div style="color:var(--text-muted)">Loading profile...</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const user = requireAuth(); // any role can view profiles
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetId = urlParams.get('id');
+
+  if (user && targetId) {
+    init();
+  } else if (!targetId) {
+    document.getElementById('profileContent').innerHTML = "<div style='color:#ef4444'>No user specified.</div>";
+  }
+
+  async function init() {
+    const isFaculty = user.role === 'faculty' || user.role === 'supervisor';
+    renderSidebar(isFaculty ? 'sup-scholars.html' : 'scholar-dashboard.html');
+
+    try {
+      const p = await apiGet(`/profile/${targetId}`);
+      renderProfile(p);
+    } catch(e) {
+      document.getElementById('profileContent').innerHTML = "<div style='color:#ef4444;padding:2rem'>Error loading profile. Please go back.</div>";
+    }
+  }
+
+  function renderProfile(p) {
+    const initials = p.name ? p.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() : '?';
+    const isFaculty = user.role === 'faculty' || user.role === 'supervisor';
+
+    let extraFields = '';
+    if (p.role === 'scholar') {
+      const pct = p.progress_pct || 0;
+      const progColor = pct >= 70 ? '#22c55e' : pct >= 40 ? '#f59e0b' : '#ef4444';
+      extraFields = `
+        <div class="p-item"><label>Enrollment ID</label><div>${p.enrollment_id || 'Not specified'}</div></div>
+        <div class="p-item"><label>Research Focus</label><div>${p.research_focus || p.thesis_stage || 'Not specified'}</div></div>
+        <div class="p-item" style="grid-column:1/-1">
+          <label>Progress</label>
+          <div style="display:flex;align-items:center;gap:1rem">
+            <div style="flex:1;height:8px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden">
+              <div style="width:${pct}%;height:100%;background:${progColor};border-radius:999px"></div>
+            </div>
+            <span style="color:${progColor};font-weight:700">${pct}%</span>
+          </div>
+        </div>`;
+    } else {
+      extraFields = `
+        <div class="p-item"><label>Experience</label><div>${p.experience || 'Not specified'}</div></div>
+        <div class="p-item"><label>Specialization</label><div>${p.specialization || 'Not specified'}</div></div>`;
+    }
+
+    const vid = p.user_id || targetId;
+    const actionBtns = (p.role === 'scholar' && isFaculty) ? `
+      <div style="display:flex;gap:1rem;justify-content:center;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--glass-border)">
+        <button onclick="window.location.href='messages.html?contact_id=${vid}'"
+          style="padding:0.65rem 1.5rem;border-radius:10px;border:1px solid var(--primary);background:rgba(0,212,255,0.1);color:var(--primary);cursor:pointer;font-size:0.9rem;font-weight:600;font-family:inherit">
+          <i class="fas fa-envelope" style="margin-right:0.5rem"></i>Message
+        </button>
+        <button onclick="window.location.href='sup-attendance.html'"
+          style="padding:0.65rem 1.5rem;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:rgba(255,255,255,0.7);cursor:pointer;font-size:0.9rem;font-weight:600;font-family:inherit">
+          <i class="fas fa-calendar-check" style="margin-right:0.5rem"></i>Attendance
+        </button>
+      </div>` : '';
+
+    document.getElementById('profileContent').innerHTML = `
+      <div class="p-avatar">${initials}</div>
+      <div class="p-name">${p.name || 'Unknown User'}</div>
+      <div class="p-role">${p.role === 'scholar' ? 'Research Scholar' : 'Faculty Member'}</div>
+      <div class="p-grid">
+        <div class="p-item"><label>Email Address</label><div>${p.email || 'Not specified'}</div></div>
+        <div class="p-item"><label>Department</label><div>${p.department || 'Not specified'}</div></div>
+        <div class="p-item"><label>Phone Number</label><div>${p.phone || 'Not specified'}</div></div>
+        <div class="p-item"><label>Gender</label><div>${p.gender || 'Not specified'}</div></div>
+        ${extraFields}
+      </div>
+      ${actionBtns}
+    `;
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Dashboard — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .page-sub-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-top: 0.3rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        .page-sub-row .dot-sep { opacity: 0.4; }
+        .page-sub-row span strong { color: var(--primary); font-weight: 600; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body animate-in">
+
+            <div class="header-row">
+                <div>
+                    <h1 id="greeting">Good morning 👋</h1>
+                    <div class="page-sub-row">
+                        <span id="dateDisplay"></span>
+                        <span class="dot-sep">·</span>
+                        <span>Portal: <strong>Faculty</strong></span>
+                    </div>
+                </div>
+                <div id="top-notif-container"></div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid" style="margin-bottom:2rem">
+                <div class="card-stat">
+                    <div class="cs-icon blue"><i class="fas fa-user-graduate"></i></div>
+                    <div class="cs-val" id="stScholars">—</div>
+                    <div class="cs-label">My Scholars</div>
+                </div>
+                <div class="card-stat">
+                    <div class="cs-icon orange"><i class="fas fa-calendar-check"></i></div>
+                    <div class="cs-val" id="stLeaves">—</div>
+                    <div class="cs-label">Pending Leaves</div>
+                    <div class="cs-tag" style="color:#f59e0b" id="leaveTag"></div>
+                </div>
+                <div class="card-stat">
+                    <div class="cs-icon purple"><i class="fas fa-book-open"></i></div>
+                    <div class="cs-val" id="stPubs">—</div>
+                    <div class="cs-label">Pubs Under Review</div>
+                </div>
+                <div class="card-stat">
+                    <div class="cs-icon green"><i class="fas fa-user-plus"></i></div>
+                    <div class="cs-val" id="stSvReqs">—</div>
+                    <div class="cs-label">Supervisor Requests</div>
+                </div>
+            </div>
+
+            <div class="dash-grid">
+                <!-- My Scholars -->
+                <div class="panel">
+                    <div class="panel-head">
+                        <h3>My Scholars</h3>
+                        <a href="sup-scholars.html" class="panel-link">View all →</a>
+                    </div>
+                    <div id="scholarList"><div class="empty-state">Loading...</div></div>
+                </div>
+
+                <!-- Pending Actions -->
+                <div class="panel">
+                    <div class="panel-head">
+                        <h3>Pending Actions</h3>
+                        <a href="sup-leave.html" class="panel-link">Leave approvals →</a>
+                    </div>
+                    <div id="pendingList"><div class="empty-state">Loading...</div></div>
+                </div>
+            </div>
+
+            <!-- Pending Student Requests -->
+            <div class="pending-requests-card" id="dashPendingCard" style="margin-top:2rem;display:none">
+              <div class="prc-header">
+                <h3><i class="fas fa-user-clock"></i> Pending Student Requests</h3>
+                <span class="prc-count" id="dashPrcCount">0 pending</span>
+              </div>
+              <div id="dashPendingList">
+                <div class="prc-loading">Loading…</div>
+              </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const user = requireAuth(['supervisor', 'faculty']);
+
+async function init() {
+    renderSidebar('supervisor-dashboard.html');
+
+    const h = new Date().getHours();
+    const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+    document.getElementById('greeting').textContent = `${greet}, ${user.name || 'Faculty'} 👋`;
+
+    const now = new Date();
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    document.getElementById('dateDisplay').textContent =
+        `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+
+    const svId = user.supervisor_id;
+    if (!svId) {
+        document.getElementById('scholarList').innerHTML = `<div class="empty-state">No supervisor profile found. Please contact admin.</div>`;
+        return;
+    }
+
+    try {
+        const [scholars, leaves, pubs, svReqs] = await Promise.all([
+            apiGet(`/supervisor/${svId}/scholars`),
+            apiGet(`/supervisor/${svId}/leave-requests`),
+            apiGet(`/supervisor/${svId}/publications`),
+            apiGet(`/supervisor/${svId}/supervisor-requests`),
+        ]);
+
+        document.getElementById('stScholars').textContent = scholars.length;
+        document.getElementById('stLeaves').textContent   = leaves.length;
+        document.getElementById('stPubs').textContent     = pubs.length;
+        document.getElementById('stSvReqs').textContent   = svReqs.length;
+
+        if (leaves.length > 0) document.getElementById('leaveTag').textContent = 'Action required';
+
+        // Show pending requests card if any
+        if (svReqs.length > 0) {
+          const dashCard = document.getElementById('dashPendingCard');
+          dashCard.style.display = 'block';
+          document.getElementById('dashPrcCount').textContent = `${svReqs.length} pending`;
+          document.getElementById('dashPendingList').innerHTML = svReqs.map(r => {
+            const initials = (r.scholar_name || 'S').split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+            return `
+            <div class="request-item" id="dreq-${r.id}">
+              <div class="request-avatar">${initials}</div>
+              <div class="request-info">
+                <div class="request-name">${r.scholar_name || 'Scholar'}</div>
+                <div class="request-meta">${r.department || 'Research Scholar'} · Wants you as supervisor</div>
+              </div>
+              <div class="request-actions">
+                <button class="accept-btn" onclick="dashHandleReq(${r.id},'accept')"><i class="fas fa-check"></i> Accept</button>
+                <button class="reject-btn" onclick="dashHandleReq(${r.id},'reject')"><i class="fas fa-times"></i> Reject</button>
+              </div>
+            </div>`;
+          }).join('');
+        }
+
+        const sl = document.getElementById('scholarList');
+        sl.innerHTML = !scholars.length
+            ? `<div class="empty-state"><i class="fas fa-users" style="font-size:2rem;opacity:0.15;margin-bottom:0.75rem;display:block"></i>No scholars assigned yet</div>`
+            : scholars.map(s => `
+            <div class="activity-item">
+                <div class="act-icon"><i class="fas fa-user-graduate"></i></div>
+                <div class="act-text" style="flex:1">
+                    <p>${s.name}</p>
+                    <span>${s.department} · ${s.thesis_stage || 'Coursework'} · ${s.progress_pct || 0}%</span>
+                </div>
+                <a href="messages.html" style="font-size:0.78rem;color:var(--primary);text-decoration:none">Message</a>
+            </div>`).join('');
+
+        const pl = document.getElementById('pendingList');
+        const allPending = [
+            ...leaves.map(l => ({ emoji:'📋', text:`${l.scholar_name} — ${l.leave_type} leave (${l.from_date})`, href:'sup-leave.html' })),
+            ...pubs.map(p =>   ({ emoji:'📄', text:`Review: "${p.title.substring(0,50)}..."`, href:'sup-publications.html' })),
+            ...svReqs.map(r => ({ emoji:'🎓', text:`${r.scholar_name} sent a supervisor request`, href:'sup-scholars.html' })),
+        ];
+        pl.innerHTML = !allPending.length
+            ? `<div class="empty-state"><i class="fas fa-check-double" style="font-size:2rem;opacity:0.15;margin-bottom:0.75rem;display:block"></i>All caught up! No pending actions.</div>`
+            : allPending.map(item => `
+            <div class="activity-item" onclick="window.location.href='${item.href}'" style="cursor:pointer">
+                <div class="act-icon">${item.emoji}</div>
+                <div class="act-text">
+                    <p>${item.text}</p>
+                    <span>Click to review →</span>
+                </div>
+            </div>`).join('');
+
+    } catch(e) { console.error('Dashboard load error:', e); toast('Failed to load dashboard data', 'error'); }
+}
+
+async function dashHandleReq(requestId, action) {
+    try {
+        await apiPut(`/supervisor/supervisor-requests/${requestId}`, { status: action === 'accept' ? 'accepted' : 'rejected' });
+        const el = document.getElementById(`dreq-${requestId}`);
+        if (el) { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; el.style.transition = '0.3s'; setTimeout(() => el.remove(), 320); }
+        toast(action === 'accept' ? 'Request accepted!' : 'Request rejected', action === 'accept' ? 'success' : 'info');
+    } catch(e) { toast('Failed to update request', 'error'); }
+}
+
+init();
+</script>
+</body>
+</html>

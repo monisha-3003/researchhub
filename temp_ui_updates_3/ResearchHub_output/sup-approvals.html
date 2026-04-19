@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ResearchHub — Approvals</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/toast.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .filter-bar { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+    .filter-pill { padding:0.42rem 1.1rem; border-radius:20px; font-size:0.82rem; font-weight:500; border:1px solid var(--glass-border); background:transparent; color:var(--text-muted); cursor:pointer; transition:all 0.2s; }
+    .filter-pill.active { background:#fff; color:#000; border-color:#fff; font-weight:700; }
+    .filter-pill:not(.active):hover { border-color:var(--primary); color:var(--primary); }
+
+    .approval-card {
+      background:var(--glass); border:1px solid var(--glass-border);
+      border-radius:14px; padding:1.3rem 1.5rem; margin-bottom:1rem;
+      display:flex; align-items:center; gap:1.2rem;
+    }
+    .ac-avatar { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#7c3aed); color:#fff; font-size:0.85rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .ac-body { flex:1; }
+    .ac-title { font-size:0.9rem; font-weight:700; color:#fff; margin-bottom:0.2rem; }
+    .ac-meta  { font-size:0.75rem; color:var(--text-muted); }
+    .ac-type  { font-size:0.72rem; font-weight:600; padding:2px 8px; border-radius:6px; background:rgba(99,102,241,0.12); color:#a5b4fc; margin-bottom:0.35rem; display:inline-block; }
+    .ac-actions { display:flex; gap:0.5rem; }
+    .btn-review { padding:0.45rem 1rem; border-radius:8px; background:transparent; border:1px solid var(--glass-border); color:var(--text-muted); font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.2s; }
+    .btn-review:hover { border-color:var(--primary); color:var(--primary); }
+    .btn-app2 { padding:0.45rem 1rem; border-radius:8px; background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); color:#a5b4fc; font-size:0.78rem; font-weight:700; cursor:pointer; transition:all 0.2s; }
+    .btn-app2:hover { background:rgba(99,102,241,0.25); }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div id="sidebar-container"></div>
+  <main class="main-wrapper">
+    <div class="content-body animate-in">
+      <div class="page-header">
+      <h1>Approvals</h1>
+      <p class="page-sub">Review and approve scholar submissions — reports, synopsis, documents</p>
+    </div>
+
+    <div class="filter-bar">
+      <button class="filter-pill active" onclick="setFilter('all',this)">All pending</button>
+      <button class="filter-pill" onclick="setFilter('supervisor',this)">Supervisor Requests</button>
+      <button class="filter-pill" onclick="setFilter('report',this)">Progress reports</button>
+      <button class="filter-pill" onclick="setFilter('synopsis',this)">Synopsis</button>
+      <button class="filter-pill" onclick="setFilter('document',this)">Documents</button>
+      <button class="filter-pill" onclick="setFilter('completed',this)">Completed</button>
+    </div>
+
+    <div id="approvalList">      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const user = requireAuth('faculty');
+  let currentFilter = 'all';
+  let S_REQUESTS = [];
+
+  if (user) { 
+    renderSidebar('sup-approvals.html'); 
+    loadPendingBadge(); 
+    loadSupervisorRequests().then(renderApprovals);
+  }
+
+  async function loadSupervisorRequests() {
+    try {
+      S_REQUESTS = await apiGet(`/supervisor/requests/${user.id}`);
+    } catch(e) { console.error('Failed to load supervisor requests', e); }
+  }
+
+  function setFilter(f, btn) {
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = f;
+    renderApprovals();
+  }
+
+  function renderApprovals() {
+    const el = document.getElementById('approvalList');
+
+    if (currentFilter === 'supervisor') {
+      if (!S_REQUESTS.length) {
+        el.innerHTML = `<div class="empty-state"><i class="fas fa-check-circle"></i> No pending supervisor requests</div>`;
+        return;
+      }
+      el.innerHTML = S_REQUESTS.map(req => `
+        <div class="approval-card">
+          <div class="ac-avatar"><i class="fas fa-user-graduate"></i></div>
+          <div class="ac-body">
+            <div class="ac-type" style="background:rgba(34,197,94,0.15); color:#22c55e;">New Scholar Request</div>
+            <div class="ac-title">${req.scholar_name}</div>
+            <div class="ac-meta">${req.department} · Requested ${new Date(req.timestamp).toLocaleDateString()}</div>
+          </div>
+          <div class="ac-actions">
+            <button class="btn-app2" onclick="handleSupReq(${req.id}, 'accept', this)">Accept</button>
+            <button class="btn-review" onclick="handleSupReq(${req.id}, 'reject', this)">Reject</button>
+          </div>
+        </div>
+      `).join('');
+      return;
+    }
+
+    // For other filters (report/synopsis/document) — no dummy data, show clean empty state
+    el.innerHTML = `<div class="empty-state"><i class="fas fa-check-circle"></i> No items in this category</div>`;
+  }
+
+  async function handleSupReq(reqId, action, btn) {
+    const origBox = btn.parentElement;
+    origBox.innerHTML = '<span style="color:var(--text-muted); font-size:0.8rem;">Processing...</span>';
+    try {
+      await apiPut(`/supervisor/request/${reqId}`, { action });
+      toast(`Request ${action}ed!`);
+      await loadSupervisorRequests();
+      renderApprovals();
+    } catch(e) {
+      toast('Failed to process request', 'error');
+      await loadSupervisorRequests();
+      renderApprovals();
+    }
+  }
+</script>
+</body>
+</html>

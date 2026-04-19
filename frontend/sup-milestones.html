@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Milestones — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <style>
+        .scholar-pill {
+            padding:0.5rem 1.1rem; border-radius:20px; border:1px solid var(--border);
+            background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.55);
+            font-size:0.85rem; font-family:'Outfit',sans-serif; cursor:pointer; transition:all 0.2s;
+        }
+        .scholar-pill.active { border-color:var(--primary); background:rgba(0,212,255,0.1); color:var(--primary); font-weight:600; }
+        .ms-stage { display:flex; flex-direction:column; align-items:center; gap:0.35rem; }
+        .ms-dot { width:28px; height:28px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:0.75rem; transition:all 0.3s; }
+        .ms-dot.done  { background:#22c55e; border-color:#22c55e; color:#fff; }
+        .ms-dot.active{ background:var(--primary); border-color:var(--primary); color:#060a14; font-weight:800; }
+        .ms-dot.pending{background:transparent; border-color:rgba(255,255,255,0.15); color:var(--text-muted); }
+        .ms-stage-label { font-size:0.72rem; color:var(--text-muted); text-align:center; max-width:70px; line-height:1.2; }
+        .ms-connector { flex:1; height:2px; background:var(--border); margin-top:-20px; position:relative; z-index:0; }
+        .ms-connector.done { background:linear-gradient(90deg,#22c55e,#00d4ff); }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body animate-in">
+
+            <div class="header-row">
+                <div><h1>Student Milestones</h1><p>Track thesis progress and milestones for each scholar</p></div>
+            </div>
+
+            <!-- Scholar Switcher -->
+            <div class="panel" style="margin-bottom:2rem">
+                <div style="font-size:0.82rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:1rem">Select Scholar</div>
+                <div id="scholarPills" style="display:flex;flex-wrap:wrap;gap:0.75rem">
+                    <div class="empty-state" style="width:100%">Loading scholars...</div>
+                </div>
+            </div>
+
+            <!-- Scholar header -->
+            <div id="scholarHeader" style="display:none;margin-bottom:2rem">
+                <div class="panel" style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">
+                    <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#00d4ff,#7b2fff);display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:#fff" id="schAvatar">PK</div>
+                    <div style="flex:1">
+                        <div style="font-size:1.2rem;font-weight:700" id="schName">—</div>
+                        <div style="color:var(--text-muted);font-size:0.85rem" id="schDept">—</div>
+                    </div>
+                    <div id="progressBadge" style="font-size:1.75rem;font-weight:800;color:var(--primary)">0%</div>
+                </div>
+            </div>
+
+            <!-- Thesis journey bar -->
+            <div class="panel" id="journeyPanel" style="display:none;margin-bottom:2rem">
+                <div style="margin-bottom:1.5rem;font-weight:700;font-size:0.95rem">Thesis Journey</div>
+                <div style="display:flex;align-items:center" id="journeyBar"></div>
+            </div>
+
+            <!-- Charts row -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem" id="chartsPanel" style="display:none">
+                <div class="panel"><div class="panel-head"><h3>Completed vs Pending</h3></div><div id="barChart"></div></div>
+                <div class="panel"><div class="panel-head"><h3>Status Distribution</h3></div><div id="pieChart" style="display:flex;align-items:center;justify-content:center"></div></div>
+            </div>
+
+            <!-- Milestone table -->
+            <div class="panel" id="msTablePanel" style="display:none">
+                <div class="panel-head"><h3>Milestone Details</h3></div>
+                <table style="width:100%;border-collapse:collapse">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border)">
+                            <th style="padding:0.75rem 1rem;text-align:left;font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase">Milestone</th>
+                            <th style="padding:0.75rem 1rem;text-align:left;font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase">Due Date</th>
+                            <th style="padding:0.75rem 1rem;text-align:left;font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase">Status</th>
+                            <th style="padding:0.75rem 1rem;text-align:left;font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase">Faculty Note</th>
+                            <th style="padding:0.75rem 1rem;text-align:left;font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="msTableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Placeholder when no scholar selected -->
+            <div id="noScholarMsg" class="panel" style="text-align:center;padding:4rem 2rem">
+                <i class="fas fa-users" style="font-size:3rem;opacity:0.15;display:block;margin-bottom:1rem"></i>
+                <p style="color:var(--text-muted)">Select a scholar above to view their milestones</p>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- Add Note Modal -->
+<div id="noteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;align-items:center;justify-content:center">
+    <div class="panel" style="width:460px;padding:2rem">
+        <div class="panel-head"><h3>Add/Edit Faculty Note</h3></div>
+        <textarea id="noteText" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;color:#fff;font-family:'Outfit',sans-serif;font-size:0.9rem;padding:1rem;outline:none;min-height:120px;resize:vertical" placeholder="Enter your feedback or note for this milestone..."></textarea>
+        <div style="display:flex;gap:1rem;margin-top:1.25rem;justify-content:flex-end">
+            <button onclick="closeNoteModal()" style="padding:0.7rem 1.5rem;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-family:'Outfit',sans-serif">Cancel</button>
+            <button onclick="saveNote()" style="padding:0.7rem 1.5rem;border-radius:10px;border:none;background:linear-gradient(90deg,#00d4ff,#7b2fff);color:#fff;font-family:'Outfit',sans-serif;font-weight:700;cursor:pointer">Save Note</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const user = requireAuth(['supervisor','faculty']);
+let currentScholarId = null;
+let editingMilestoneId = null;
+let barChart, pieChart;
+
+async function init() {
+    renderSidebar('sup-milestones.html');
+    try {
+        const svId   = user.supervisor_id;
+        const scholars = await apiGet(`/supervisor/${svId}/scholars`);
+        const pills    = document.getElementById('scholarPills');
+
+        if (!scholars.length) {
+            pills.innerHTML = `<div class="empty-state">No scholars assigned yet</div>`;
+            return;
+        }
+        pills.innerHTML = scholars.map((s,i) =>
+            `<button class="scholar-pill${i===0?' active':''}" onclick="loadScholar(${s.id},'${s.name}','${s.department}',this)">
+                ${s.name}
+            </button>`
+        ).join('');
+        // Auto-load first
+        loadScholar(scholars[0].id, scholars[0].name, scholars[0].department, pills.querySelector('.scholar-pill'));
+    } catch(e) { console.error(e); }
+}
+
+async function loadScholar(scholarId, name, dept, btn) {
+    currentScholarId = scholarId;
+    document.querySelectorAll('.scholar-pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Show scholar header
+    const initials = name.split(' ').map(n=>n[0]).join('').toUpperCase();
+    document.getElementById('schAvatar').textContent = initials;
+    document.getElementById('schName').textContent   = name;
+    document.getElementById('schDept').textContent   = dept || '—';
+    document.getElementById('scholarHeader').style.display = 'block';
+    document.getElementById('noScholarMsg').style.display  = 'none';
+    document.getElementById('journeyPanel').style.display  = 'block';
+    document.getElementById('chartsPanel').style.display   = 'grid';
+    document.getElementById('msTablePanel').style.display  = 'block';
+
+    try {
+        const items = await apiGet(`/milestones/${scholarId}`);
+
+        // Progress
+        const total     = items.length;
+        const completed = items.filter(m => m.status === 'completed').length;
+        const inProg    = items.filter(m => m.status === 'in_progress').length;
+        const pending   = items.filter(m => m.status === 'pending').length;
+        const pct       = total ? Math.round(completed / total * 100) : 0;
+        document.getElementById('progressBadge').textContent = pct + '%';
+
+        // Journey bar
+        const stages = ['Coursework','Proposal','Synopsis','Seminar','Submission'];
+        const jq = document.getElementById('journeyBar');
+        jq.innerHTML = stages.map((s, i) => {
+            const done   = i < Math.floor(pct / 25);
+            const active = i === Math.floor(pct / 25);
+            const cls    = done ? 'done' : active ? 'active' : 'pending';
+            const icon   = done ? '<i class="fas fa-check"></i>' : (i+1);
+            const lineClass = i < stages.length-1 ? (done ? 'ms-connector done' : 'ms-connector') : '';
+            return `
+                <div class="ms-stage">
+                    <div class="ms-dot ${cls}">${icon}</div>
+                    <div class="ms-stage-label">${s}</div>
+                </div>
+                ${i < stages.length-1 ? `<div class="${lineClass}"></div>` : ''}
+            `;
+        }).join('');
+
+        // Charts — destroy old instances
+        if (barChart) { try { barChart.destroy(); } catch(e){} }
+        if (pieChart) { try { pieChart.destroy(); } catch(e){} }
+
+        barChart = new ApexCharts(document.getElementById('barChart'), {
+            series: [{ name: 'Count', data: [completed, inProg, pending] }],
+            chart:  { type: 'bar', height: 240, toolbar:{show:false}, background:'transparent' },
+            colors: ['#22c55e','#f59e0b','#64748b'],
+            xaxis:  { categories: ['Completed','In Progress','Pending'], labels:{style:{colors:'#94a3b8'}} },
+            plotOptions: { bar: { borderRadius: 6, columnWidth:'50%' } },
+            dataLabels: { enabled: false },
+            grid: { borderColor:'rgba(255,255,255,0.04)', strokeDashArray:4 },
+            theme: { mode:'dark' },
+        });
+        barChart.render();
+
+        pieChart = new ApexCharts(document.getElementById('pieChart'), {
+            series: [completed, inProg, pending],
+            labels: ['Completed','In Progress','Pending'],
+            chart:  { type:'donut', height:240, background:'transparent' },
+            colors: ['#22c55e','#f59e0b','#64748b'],
+            legend: { position:'bottom', labels:{colors:'#94a3b8'} },
+            dataLabels: { enabled: false },
+            stroke: { show: false },
+            plotOptions: { pie: { donut:{size:'70%'} } },
+            theme: { mode:'dark' },
+        });
+        pieChart.render();
+
+        // Table
+        const tb = document.getElementById('msTableBody');
+        if (!items.length) {
+            tb.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted)">No milestones added yet</td></tr>`;
+            return;
+        }
+        const statusClass = { completed:'pill-active', in_progress:'pill-pending', pending:'pill-pending' };
+        const statusColor = { completed:'#22c55e', in_progress:'#f59e0b', pending:'rgba(255,255,255,0.3)' };
+        tb.innerHTML = items.map(m => `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.03)">
+                <td style="padding:1rem">
+                    <div style="font-weight:600">${m.title}</div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem">${(m.description||'').substring(0,60)}</div>
+                </td>
+                <td style="padding:1rem;color:var(--text-muted);font-size:0.85rem">${m.due_date ? new Date(m.due_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—'}</td>
+                <td style="padding:1rem">
+                    <span style="padding:0.3rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:600;background:${statusColor[m.status]}22;color:${statusColor[m.status]}">
+                        ${m.status?.replace('_',' ') || 'pending'}
+                    </span>
+                </td>
+                <td style="padding:1rem;font-size:0.82rem;color:var(--text-muted);max-width:200px">
+                    ${m.faculty_note || '<span style="opacity:0.4">No note</span>'}
+                </td>
+                <td style="padding:1rem">
+                    <button onclick="openNoteModal(${m.id},'${(m.faculty_note||'').replace(/'/g,'\\\'')}')" 
+                            style="padding:0.35rem 0.8rem;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--primary);cursor:pointer;font-size:0.78rem;font-family:'Outfit',sans-serif">
+                        <i class="fas fa-pencil"></i> Note
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch(e) { console.error(e); toast('Failed to load milestones','error'); }
+}
+
+function openNoteModal(id, existingNote) {
+    editingMilestoneId = id;
+    document.getElementById('noteText').value = existingNote || '';
+    document.getElementById('noteModal').style.display = 'flex';
+}
+function closeNoteModal() {
+    document.getElementById('noteModal').style.display = 'none';
+    editingMilestoneId = null;
+}
+async function saveNote() {
+    const note = document.getElementById('noteText').value.trim();
+    if (!note) { toast('Please enter a note','error'); return; }
+    try {
+        await apiPut(`/milestones/${editingMilestoneId}`, { faculty_note: note });
+        toast('Note saved!');
+        closeNoteModal();
+        // Reload current scholar
+        const pill = document.querySelector('.scholar-pill.active');
+        if (pill) pill.click();
+    } catch(e) { toast('Failed to save note','error'); }
+}
+
+init();
+</script>
+</body>
+</html>

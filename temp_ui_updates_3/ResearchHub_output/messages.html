@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body animate-in" style="padding-bottom:1rem">
+            <div class="header-row" style="margin-bottom:1.5rem">
+                <div>
+                    <h1>Messages</h1>
+                    <p>Real-time communication with your supervisor and faculty</p>
+                </div>
+            </div>
+
+            <div class="messages-layout">
+                <!-- LEFT: Conversations -->
+                <div class="chat-sidebar">
+                    <div class="chat-sidebar-header">
+                        <span>Conversations</span>
+                        <button class="action-btn" onclick="loadConversations()" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div class="conv-list" id="convList">
+                        <div class="empty-state">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Chat -->
+                <div class="chat-main" id="chatMain">
+                    <div class="chat-header">
+                        <div class="avatar-circle" id="chatAvatar" style="opacity:0.2">?</div>
+                        <div>
+                            <div style="font-weight:700" id="chatName">Select a conversation</div>
+                            <div style="font-size:0.78rem;color:var(--text-muted)" id="chatRole">—</div>
+                        </div>
+                    </div>
+                    <div class="chat-history" id="chatHistory">
+                        <div class="empty-state"><i class="fas fa-comments" style="font-size:3rem;opacity:0.1;margin-bottom:1rem;display:block"></i>Choose a conversation to start messaging</div>
+                    </div>
+                    <div class="chat-footer">
+                        <div class="chat-input-wrapper">
+                            <input type="text" class="chat-input" id="msgInput" placeholder="Type a message..." disabled onkeydown="if(event.key==='Enter')sendMessage()">
+                            <button class="btn-send" id="sendBtn" onclick="sendMessage()" disabled>
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const user = requireAuth(['scholar', 'supervisor']);
+let currentReceiverId = null;
+let msgInterval = null;
+
+async function init() {
+    renderSidebar('messages.html');
+    await loadConversations();
+}
+
+async function loadConversations() {
+    const list = document.getElementById('convList');
+    try {
+        const convs = await apiGet(`/messages/conversations-list/${user.id}`);
+        if (!convs.length) {
+            list.innerHTML = `<div class="empty-state">No conversations yet. Send a message to your supervisor first.</div>`;
+            return;
+        }
+        list.innerHTML = convs.map(c => {
+            const initials = c.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+            return `
+            <div class="conv-item ${c.user_id === currentReceiverId ? 'active' : ''}" onclick="openChat(${c.user_id}, '${c.name}', '${c.role}', '${initials}')">
+                <div class="avatar-circle" style="font-size:0.8rem">${initials}</div>
+                <div class="conv-info">
+                    <div class="conv-name">${c.name}</div>
+                    <div class="conv-sub">${c.last_message || 'No messages yet'}</div>
+                </div>
+                ${c.unread > 0 ? `<span style="min-width:20px;height:20px;border-radius:50%;background:var(--primary);color:#000;font-size:0.7rem;font-weight:700;display:flex;align-items:center;justify-content:center">${c.unread}</span>` : ''}
+            </div>`;
+        }).join('');
+    } catch(e) {
+        list.innerHTML = `<div class="empty-state">Failed to load</div>`;
+    }
+}
+
+async function openChat(receiverId, name, role, initials) {
+    currentReceiverId = receiverId;
+    document.getElementById('chatName').textContent = name;
+    document.getElementById('chatRole').textContent = role.charAt(0).toUpperCase() + role.slice(1);
+    document.getElementById('chatAvatar').textContent = initials;
+    document.getElementById('chatAvatar').style.opacity = '1';
+    document.getElementById('msgInput').disabled = false;
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('msgInput').focus();
+
+    // Mark active conversation
+    document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+
+    await loadMessages();
+
+    // Auto-refresh every 5 seconds while chat is open
+    if (msgInterval) clearInterval(msgInterval);
+    msgInterval = setInterval(loadMessages, 5000);
+
+    // Refresh conversation list too
+    await loadConversations();
+}
+
+async function loadMessages() {
+    if (!currentReceiverId) return;
+    const history = document.getElementById('chatHistory');
+    try {
+        const msgs = await apiGet(`/messages/conversation?user1=${user.id}&user2=${currentReceiverId}`);
+        if (!msgs.length) {
+            history.innerHTML = `<div class="empty-state">No messages yet. Say hello! 👋</div>`;
+            return;
+        }
+        history.innerHTML = msgs.map(m => {
+            const isMine = m.sender_id === user.id;
+            const time = new Date(m.sent_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            return `
+            <div class="msg-row ${isMine ? 'sent' : 'received'}">
+                <div class="msg-bubble">
+                    ${m.content}
+                    <span class="msg-time">${time}</span>
+                </div>
+            </div>`;
+        }).join('');
+        // Auto-scroll to bottom
+        history.scrollTop = history.scrollHeight;
+    } catch(e) { console.error(e); }
+}
+
+async function sendMessage() {
+    const input = document.getElementById('msgInput');
+    const content = input.value.trim();
+    if (!content || !currentReceiverId) return;
+    input.value = '';
+
+    try {
+        await apiPost('/messages/', {
+            sender_id  : user.id,
+            receiver_id: currentReceiverId,
+            content    : content,
+        });
+        await loadMessages();
+    } catch(e) {
+        toast('Failed to send message', 'error');
+        input.value = content;
+    }
+}
+
+init();
+</script>
+</body>
+</html>

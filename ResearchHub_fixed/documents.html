@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ResearchHub — Documents</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/toast.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Upload zone */
+    .upload-zone {
+      background: var(--glass);
+      border: 2px dashed var(--glass-border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 1.5rem;
+    }
+    .upload-zone:hover { border-color: var(--primary); background: rgba(0,242,255,0.03); }
+    .upload-zone i { font-size: 2rem; color: var(--primary); margin-bottom: 0.75rem; display: block; }
+    .upload-zone h3 { color: #fff; font-size: 0.95rem; margin-bottom: 0.3rem; }
+    .upload-zone h3 span { color: var(--primary); text-decoration: underline; cursor: pointer; }
+    .upload-zone p { color: var(--text-muted); font-size: 0.8rem; }
+
+    /* Filter pills */
+    .filter-bar { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .filter-pill {
+      padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.82rem; font-weight: 500;
+      border: 1px solid var(--glass-border); background: transparent; color: var(--text-muted);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .filter-pill.active { background: #fff; color: #000; border-color: #fff; font-weight: 700; }
+    .filter-pill:not(.active):hover { border-color: var(--primary); color: var(--primary); }
+
+    /* Document count */
+    .doc-count { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem; font-weight: 500; }
+
+    /* Document card grid */
+    .doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+
+    .doc-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 1.2rem;
+      transition: border-color 0.2s;
+    }
+    .doc-card:hover { border-color: rgba(255,255,255,0.2); }
+
+    .doc-type-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+      margin-bottom: 0.75rem;
+    }
+    .type-pdf { background: rgba(239,68,68,0.15); color: #f87171; }
+    .type-doc { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .type-img { background: rgba(34,197,94,0.15); color: #4ade80; }
+
+    .doc-name { font-size: 0.875rem; font-weight: 600; color: #fff; margin-bottom: 0.3rem; line-height: 1.3; }
+    .doc-meta { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+
+    .doc-footer { display: flex; justify-content: space-between; align-items: center; }
+    .doc-status { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+    .status-pending  { background: rgba(245,158,11,0.12); color: #f59e0b; }
+    .status-approved { background: rgba(34,197,94,0.12);  color: #22c55e; }
+    .status-verified { background: rgba(99,102,241,0.12); color: #a5b4fc; }
+    .doc-view { font-size: 0.78rem; color: var(--primary); cursor: pointer; text-decoration: none; }
+    .doc-view:hover { text-decoration: underline; }
+
+    .upload-btn {
+      padding: 0.6rem 1.3rem; border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #000; border: none; font-weight: 700; font-size: 0.875rem;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .upload-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 15px rgba(0,242,255,0.2); }
+
+    #fileInput { display: none; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div id="sidebar-container"></div>
+
+  <main class="main-wrapper">
+    <div class="content-body animate-in">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <h1>Documents</h1>
+        <p class="page-sub">Upload and manage your thesis files, certificates &amp; reports</p>
+      </div>
+      <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+        <i class="fas fa-plus" style="margin-right:0.4rem"></i> Upload file
+      </button>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf,.doc,.docx" onchange="handleUpload(event)">
+
+    <!-- Drop Zone -->
+    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"
+         ondragover="event.preventDefault();this.style.borderColor='var(--primary)'"
+         ondragleave="this.style.borderColor=''"
+         ondrop="handleDrop(event)">
+      <i class="fas fa-file-upload"></i>
+      <h3>Drop files here or <span>browse</span></h3>
+      <p>Supports PDF, DOC, DOCX · Max 20MB per file</p>
+    </div>
+
+    <!-- Filter pills -->
+    <div class="filter-bar">
+      <button class="filter-pill active" onclick="filterDocs('all', this)">All</button>
+      <button class="filter-pill" onclick="filterDocs('thesis', this)">Thesis</button>
+      <button class="filter-pill" onclick="filterDocs('reports', this)">Reports</button>
+      <button class="filter-pill" onclick="filterDocs('certificates', this)">Certificates</button>
+      <button class="filter-pill" onclick="filterDocs('other', this)">Other</button>
+    </div>
+    <div class="doc-count" id="docCount">All documents (6)</div>
+
+    <!-- Doc grid -->
+    <div class="doc-grid" id="docGrid">
+      <!-- Populated by JS -->
+    </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const user = requireAuth('scholar');
+
+  const DEMO_DOCS = [
+    { name: 'Synopsis draft v2',        type: 'PDF', category: 'thesis',       size:'1.2 MB',  date:'Mar 14, 2026', status:'pending' },
+    { name: 'Research proposal final',  type: 'PDF', category: 'thesis',       size:'890 KB',  date:'Jul 28, 2024', status:'approved' },
+    { name: 'Q4 progress report 2025',  type: 'DOC', category: 'reports',      size:'540 KB',  date:'Jan 10, 2026', status:'approved' },
+    { name: 'Q3 progress report 2025',  type: 'DOC', category: 'reports',      size:'480 KB',  date:'Oct 8, 2025',  status:'approved' },
+    { name: 'JRF award letter',         type: 'PDF', category: 'certificates', size:'320 KB',  date:'Mar 5, 2023',  status:'verified' },
+    { name: 'UG degree certificate',    type: 'PDF', category: 'certificates', size:'210 KB',  date:'Mar 5, 2023',  status:'verified' },
+  ];
+  let currentFilter = 'all';
+
+  if (user) {
+    renderSidebar('documents.html');
+    renderDocs('all');
+  }
+
+  function filterDocs(cat, btn) {
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = cat;
+    renderDocs(cat);
+  }
+
+  function renderDocs(cat) {
+    const filtered = cat === 'all' ? DEMO_DOCS : DEMO_DOCS.filter(d => d.category === cat);
+    document.getElementById('docCount').textContent = (cat === 'all' ? 'All' : cap(cat)) + ` documents (${filtered.length})`;
+    document.getElementById('docGrid').innerHTML = filtered.map(d => `
+      <div class="doc-card" data-cat="${d.category}">
+        <div class="doc-type-badge type-${d.type.toLowerCase()}">${d.type}</div>
+        <div class="doc-name">${d.name}</div>
+        <div class="doc-meta">Uploaded ${d.date} · ${d.size}</div>
+        <div class="doc-footer">
+          <span class="doc-status status-${d.status}">${cap(d.status)}</span>
+          <a class="doc-view" href="#" onclick="event.preventDefault();toast('Opening ${d.name}…')">View ↗</a>
+        </div>
+      </div>`).join('');
+  }
+
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  function handleUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const sizeMB = (file.size / 1048576).toFixed(1);
+    if (file.size > 20 * 1048576) { toast('File exceeds 20MB limit', 'error'); return; }
+    const ext = file.name.split('.').pop().toUpperCase();
+    DEMO_DOCS.unshift({ name: file.name, type: ext, category: 'other', size: `${sizeMB} MB`, date: 'Just now', status: 'pending' });
+    renderDocs(currentFilter);
+    toast(`"${file.name}" uploaded successfully!`);
+    e.target.value = '';
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').style.borderColor = '';
+    const file = e.dataTransfer.files[0];
+    if (file) { document.getElementById('fileInput').files = e.dataTransfer.files; handleUpload({target:{files: e.dataTransfer.files, value:''}}); }
+  }
+</script>
+</body>
+</html>

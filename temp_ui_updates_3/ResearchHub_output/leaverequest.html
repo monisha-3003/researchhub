@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Request — ResearchHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .form-lbl { font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:0.4rem;display:block; }
+        .form-inp {
+            width:100%;padding:0.85rem 1rem;border-radius:10px;
+            background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+            color:#fff;font-size:0.95rem;font-family:'Outfit',sans-serif;outline:none;
+            transition:border-color 0.2s,box-shadow 0.2s;
+        }
+        .form-inp:focus { border-color:rgba(0,212,255,0.5);box-shadow:0 0 0 3px rgba(0,212,255,0.07); }
+        .form-inp:disabled { opacity:0.45;cursor:not-allowed; }
+        .form-inp.err { border-color:#ef4444; }
+
+        .field-err { font-size:0.78rem;color:#f87171;margin-top:0.3rem;display:none; }
+        .field-err.show { display:block; }
+
+        /* File upload drop zone */
+        .drop-zone {
+            border:2px dashed rgba(255,255,255,0.12);border-radius:12px;padding:1.5rem;
+            text-align:center;cursor:pointer;transition:all 0.2s;
+        }
+        .drop-zone:hover,.drop-zone.over { border-color:var(--primary);background:rgba(0,212,255,0.04); }
+        .drop-zone i { font-size:1.75rem;color:var(--text-muted);margin-bottom:0.5rem;display:block; }
+        .drop-zone p { font-size:0.85rem;color:var(--text-muted);margin:0; }
+        .drop-zone .file-chosen { font-size:0.82rem;color:var(--primary);font-weight:600;margin-top:0.5rem; }
+
+        /* History table */
+        .hist-row { border-bottom:1px solid rgba(255,255,255,0.04); }
+        .hist-row:last-child { border:none; }
+        .status-chip { display:inline-block;padding:0.28rem 0.75rem;border-radius:20px;font-size:0.73rem;font-weight:700; }
+        .chip-pending  { background:rgba(245,158,11,0.12);color:#fbbf24; }
+        .chip-approved { background:rgba(34,197,94,0.12); color:#4ade80; }
+        .chip-rejected { background:rgba(239,68,68,0.12);  color:#f87171; }
+
+        /* Date info box */
+        .date-info { border-radius:10px;padding:0.75rem 1rem;font-size:0.82rem;line-height:1.5; }
+        .info-blue { background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);color:rgba(0,212,255,0.9); }
+        .info-red  { background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);color:#f87171; }
+        .info-yellow{ background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:#fbbf24; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div id="sidebar-container"></div>
+    <main class="main-wrapper">
+        <div class="content-body animate-in">
+
+            <div class="header-row">
+                <div><h1>Leave Request</h1><p>Submit academic leave and track application history</p></div>
+                <div id="pendingBadge" style="display:none">
+                    <span style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#fbbf24;padding:0.4rem 1rem;border-radius:20px;font-size:0.82rem;font-weight:600">
+                        <i class="fas fa-clock" style="margin-right:0.4rem"></i><span id="pendingCount">0</span> pending
+                    </span>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:420px 1fr;gap:2.5rem;align-items:flex-start">
+
+                <!-- ── FORM ── -->
+                <div class="panel">
+                    <div class="panel-head"><h3><i class="fas fa-paper-plane" style="margin-right:0.6rem;color:var(--primary)"></i>New Application</h3></div>
+
+                    <form id="leaveForm" novalidate onsubmit="submitLeave(event)">
+
+                        <!-- Supervisor -->
+                        <div style="margin-bottom:1.2rem">
+                            <label class="form-lbl">Send To (Supervisor)</label>
+                            <select id="supervisorId" class="form-inp" required>
+                                <option value="">Loading supervisor...</option>
+                            </select>
+                            <div class="field-err" id="err-supervisor">Please select a supervisor</div>
+                        </div>
+
+                        <!-- Leave Type -->
+                        <div style="margin-bottom:1.2rem">
+                            <label class="form-lbl">Leave Type</label>
+                            <select id="leaveType" class="form-inp">
+                                <option value="Personal">Personal</option>
+                                <option value="Medical">Medical</option>
+                                <option value="Conference">Conference / Seminar</option>
+                                <option value="Field Work">Field Work</option>
+                                <option value="Maternity">Maternity / Paternity</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <!-- Date Range -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.75rem">
+                            <div>
+                                <label class="form-lbl">From Date</label>
+                                <input type="date" id="fromDate" class="form-inp" required onchange="validateDates()">
+                                <div class="field-err" id="err-fromDate">Invalid from date</div>
+                            </div>
+                            <div>
+                                <label class="form-lbl">To Date</label>
+                                <input type="date" id="toDate"   class="form-inp" required onchange="validateDates()">
+                                <div class="field-err" id="err-toDate">Invalid to date</div>
+                            </div>
+                        </div>
+
+                        <!-- Date hints -->
+                        <div id="dateHint" style="margin-bottom:1.2rem"></div>
+
+                        <!-- Reason -->
+                        <div style="margin-bottom:1.2rem">
+                            <label class="form-lbl">Reason <span style="color:var(--text-muted);text-transform:none;font-weight:400">(min 20 characters)</span></label>
+                            <textarea id="reason" class="form-inp" rows="3"
+                                      placeholder="Briefly describe the reason for your leave..."
+                                      required oninput="validateReason()" style="resize:vertical"></textarea>
+                            <div style="display:flex;justify-content:space-between;margin-top:0.3rem">
+                                <div class="field-err show" id="err-reason" style="display:none">Minimum 20 characters required</div>
+                                <div id="reasonCount" style="font-size:0.72rem;color:var(--text-muted);margin-left:auto">0 / 500</div>
+                            </div>
+                        </div>
+
+                        <!-- Supporting Evidence -->
+                        <div style="margin-bottom:1.5rem">
+                            <label class="form-lbl">Supporting Evidence <span style="color:var(--text-muted);text-transform:none;font-weight:400">(optional)</span></label>
+                            <div class="drop-zone" id="dropZone" onclick="document.getElementById('evidenceFile').click()"
+                                 ondragover="e=>e.preventDefault()" ondrop="handleDrop(event)">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Click to upload or drag & drop</p>
+                                <p style="font-size:0.75rem;margin-top:0.25rem;opacity:0.6">PDF, DOCX, JPG, PNG — max 5 MB</p>
+                                <div class="file-chosen" id="fileChosen" style="display:none"></div>
+                            </div>
+                            <input type="file" id="evidenceFile" style="display:none"
+                                   accept=".pdf,.docx,.jpg,.jpeg,.png"
+                                   onchange="handleFileChange(this)">
+                            <div class="field-err" id="err-file">File too large (max 5 MB) or unsupported format</div>
+                        </div>
+
+                        <!-- Submit -->
+                        <button type="submit" class="btn-auth" id="submitBtn" style="width:100%">
+                            <i class="fas fa-paper-plane" style="margin-right:0.5rem"></i>Submit Application
+                        </button>
+                    </form>
+                </div>
+
+                <!-- ── HISTORY ── -->
+                <div class="panel">
+                    <div class="panel-head">
+                        <h3><i class="fas fa-history" style="margin-right:0.6rem;color:var(--primary)"></i>Application History</h3>
+                        <div style="display:flex;gap:0.5rem">
+                            <button onclick="filterHistory('all')"      class="hist-filter active" data-f="all"     >All</button>
+                            <button onclick="filterHistory('pending')"  class="hist-filter"         data-f="pending" >Pending</button>
+                            <button onclick="filterHistory('approved')" class="hist-filter"         data-f="approved">Approved</button>
+                            <button onclick="filterHistory('rejected')" class="hist-filter"         data-f="rejected">Rejected</button>
+                        </div>
+                    </div>
+                    <div id="leaveHistory"><div class="empty-state">Loading history...</div></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<style>
+.hist-filter { padding:0.35rem 0.85rem;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:0.78rem;font-family:'Outfit',sans-serif;cursor:pointer;transition:0.15s; }
+.hist-filter.active,.hist-filter:hover { border-color:var(--primary);background:rgba(0,212,255,0.07);color:var(--primary); }
+</style>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const user = requireAuth('scholar');
+let scholarId = null;
+let allLeaves = [];
+
+// ── Date constraints ──────────────────────────────────────────────────
+const today      = new Date();
+const maxPastDate= new Date(today); maxPastDate.setDate(today.getDate() - 60);   // 60 days back
+const maxFuture  = new Date(today); maxFuture.setDate(today.getDate() + 180);    // 6 months forward
+
+async function init() {
+    if (!user) return;
+    renderSidebar('leaverequest.html');
+
+    // Set date input constraints
+    document.getElementById('fromDate').min = maxPastDate.toISOString().split('T')[0];
+    document.getElementById('fromDate').max = maxFuture.toISOString().split('T')[0];
+    document.getElementById('toDate').min   = maxPastDate.toISOString().split('T')[0];
+    document.getElementById('toDate').max   = maxFuture.toISOString().split('T')[0];
+
+    try {
+        const scholar = await apiGet(`/scholar/${user.scholar_id || user.id}`);
+        scholarId = scholar.id;
+        const sel = document.getElementById('supervisorId');
+        if (scholar.supervisor_id) {
+            sel.innerHTML = `<option value="${scholar.supervisor_id}">${scholar.supervisor_name}</option>`;
+        } else {
+            sel.innerHTML = `<option value="">No supervisor assigned yet — contact admin</option>`;
+        }
+        await loadHistory();
+    } catch(err) {
+        toast('Failed to load your profile', 'error');
+    }
+}
+
+// ── Date validation ───────────────────────────────────────────────────
+function validateDates() {
+    const from = document.getElementById('fromDate').value;
+    const to   = document.getElementById('toDate').value;
+    const hint = document.getElementById('dateHint');
+    hint.innerHTML = '';
+
+    let ok = true;
+
+    if (from) {
+        const fromD = new Date(from);
+        const diff  = (today - fromD) / 86400000;
+        if (diff > 60) {
+            showErr('err-fromDate', 'From date cannot be more than 60 days in the past');
+            document.getElementById('fromDate').classList.add('err');
+            ok = false;
+        } else {
+            hideErr('err-fromDate');
+            document.getElementById('fromDate').classList.remove('err');
+        }
+    }
+
+    if (from && to) {
+        const fromD = new Date(from), toD = new Date(to);
+        if (toD < fromD) {
+            showErr('err-toDate', 'To date must be after from date');
+            document.getElementById('toDate').classList.add('err');
+            ok = false;
+        } else {
+            hideErr('err-toDate');
+            document.getElementById('toDate').classList.remove('err');
+            const duration = Math.ceil((toD - fromD) / 86400000) + 1;
+            if (duration > 30) {
+                hint.innerHTML = `<div class="date-info info-yellow"><i class="fas fa-exclamation-triangle" style="margin-right:0.4rem"></i>This is a long leave (${duration} days). Please ensure you have appropriate approvals.</div>`;
+            } else {
+                hint.innerHTML = `<div class="date-info info-blue"><i class="fas fa-info-circle" style="margin-right:0.4rem"></i>${duration} day${duration>1?'s':''} of leave requested</div>`;
+            }
+        }
+    }
+    return ok;
+}
+
+// ── Reason validation ─────────────────────────────────────────────────
+function validateReason() {
+    const val = document.getElementById('reason').value;
+    document.getElementById('reasonCount').textContent = `${val.length} / 500`;
+    if (val.length > 500) {
+        document.getElementById('reason').value = val.substring(0, 500);
+    }
+    if (val.trim().length < 20) {
+        document.getElementById('err-reason').style.display = 'block';
+        return false;
+    }
+    document.getElementById('err-reason').style.display = 'none';
+    return true;
+}
+
+// ── File handling ─────────────────────────────────────────────────────
+function handleFileChange(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const ok = validateFile(file);
+    if (!ok) input.value = '';
+}
+function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.remove('over');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    if (validateFile(file)) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        document.getElementById('evidenceFile').files = dt.files;
+    }
+}
+function validateFile(file) {
+    const allowed = ['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document','image/jpeg','image/jpg','image/png'];
+    const maxSize = 5 * 1024 * 1024;
+    if (!allowed.includes(file.type) || file.size > maxSize) {
+        showErr('err-file', file.size > maxSize ? 'File too large (max 5 MB)' : 'Unsupported file type');
+        document.getElementById('fileChosen').style.display = 'none';
+        return false;
+    }
+    hideErr('err-file');
+    const fc = document.getElementById('fileChosen');
+    fc.style.display = 'block';
+    fc.textContent   = `📎 ${file.name} (${(file.size/1024).toFixed(0)} KB)`;
+    return true;
+}
+
+// ── Error helpers ─────────────────────────────────────────────────────
+function showErr(id, msg) { const el=document.getElementById(id); el.textContent=msg; el.style.display='block'; }
+function hideErr(id)       { document.getElementById(id).style.display='none'; }
+
+// ── Submit ────────────────────────────────────────────────────────────
+async function submitLeave(e) {
+    e.preventDefault();
+    const svVal = document.getElementById('supervisorId').value;
+    if (!svVal) { showErr('err-supervisor','Please select a supervisor'); return; }
+    else hideErr('err-supervisor');
+
+    if (!validateDates()) { toast('Please fix the date range','error'); return; }
+    if (!validateReason()) { toast('Reason must be at least 20 characters','error'); return; }
+
+    const from = document.getElementById('fromDate').value;
+    const to   = document.getElementById('toDate').value;
+    if (!from || !to) { toast('Please select both dates','error'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+    try {
+        await apiPost('/leave/', {
+            scholar_id   : scholarId,
+            supervisor_id: parseInt(svVal),
+            leave_type   : document.getElementById('leaveType').value,
+            from_date    : from,
+            to_date      : to,
+            reason       : document.getElementById('reason').value.trim(),
+            submitted_to : 'faculty',
+        });
+        toast('Leave application submitted successfully!');
+        document.getElementById('leaveForm').reset();
+        document.getElementById('fileChosen').style.display = 'none';
+        document.getElementById('dateHint').innerHTML = '';
+        document.getElementById('reasonCount').textContent = '0 / 500';
+        await loadHistory();
+    } catch(err) {
+        toast(err.error || 'Submission failed. Please try again.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:0.5rem"></i>Submit Application';
+    }
+}
+
+// ── History ───────────────────────────────────────────────────────────
+async function loadHistory() {
+    const c = document.getElementById('leaveHistory');
+    try {
+        allLeaves = await apiGet(`/leave/${scholarId}`);
+        const pending = allLeaves.filter(l => l.status==='pending').length;
+        document.getElementById('pendingCount').textContent = pending;
+        document.getElementById('pendingBadge').style.display = pending ? 'block' : 'none';
+        renderHistory('all');
+    } catch(err) { c.innerHTML = `<div class="empty-state">Failed to load history</div>`; }
+}
+
+function filterHistory(status) {
+    document.querySelectorAll('.hist-filter').forEach(b => {
+        b.classList.toggle('active', b.dataset.f === status);
+    });
+    renderHistory(status);
+}
+
+function renderHistory(filter) {
+    const c = document.getElementById('leaveHistory');
+    const items = filter === 'all' ? allLeaves : allLeaves.filter(l => l.status === filter);
+    if (!items.length) {
+        c.innerHTML = `<div class="empty-state"><i class="fas fa-calendar-times" style="font-size:2.5rem;opacity:0.15;display:block;margin-bottom:1rem"></i>No ${filter === 'all' ? '' : filter} applications</div>`;
+        return;
+    }
+    c.innerHTML = `<table style="width:100%;border-collapse:collapse">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:0.75rem 1rem;text-align:left;font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase">Date Range</th>
+            <th style="padding:0.75rem 1rem;text-align:left;font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase">Type</th>
+            <th style="padding:0.75rem 1rem;text-align:left;font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase">Days</th>
+            <th style="padding:0.75rem 1rem;text-align:left;font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase">Status</th>
+            <th style="padding:0.75rem 1rem;text-align:left;font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase">Supervisor Note</th>
+        </tr></thead>
+        <tbody>${items.map(l => {
+            const days = Math.ceil((new Date(l.to_date) - new Date(l.from_date)) / 86400000) + 1;
+            const chipClass = `chip-${l.status}`;
+            return `<tr class="hist-row">
+                <td style="padding:1rem">
+                    <div style="font-weight:600;font-size:0.88rem">${fmtDate(l.from_date)}</div>
+                    <div style="color:var(--text-muted);font-size:0.78rem">to ${fmtDate(l.to_date)}</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.2rem">${fmtDate(l.applied_at,true)}</div>
+                </td>
+                <td style="padding:1rem;font-size:0.85rem;color:var(--text-muted)">${l.leave_type}</td>
+                <td style="padding:1rem;font-size:0.85rem;font-weight:600">${days}d</td>
+                <td style="padding:1rem"><span class="status-chip ${chipClass}">${l.status}</span></td>
+                <td style="padding:1rem;font-size:0.8rem;color:var(--text-muted);max-width:200px">${l.supervisor_note || '—'}</td>
+            </tr>`;
+        }).join('')}</tbody>
+    </table>`;
+}
+
+function fmtDate(d, withTime=false) {
+    if (!d) return '—';
+    const opts = { day:'numeric', month:'short', year:'numeric' };
+    if (withTime) opts.hour = opts.minute = '2-digit';
+    return new Date(d).toLocaleDateString('en-IN', opts);
+}
+
+// Drag-over highlight
+document.addEventListener('DOMContentLoaded', () => {
+    const dz = document.getElementById('dropZone');
+    if (dz) {
+        dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+    }
+});
+
+init();
+</script>
+</body>
+</html>
