@@ -25,7 +25,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
     f"mysql+mysqlconnector://{os.environ.get('MYSQL_USER')}:"
     f"{os.environ.get('MYSQL_PASSWORD')}@"
     f"{os.environ.get('MYSQL_HOST')}:"
-    f"{os.environ.get('MYSQL_PORT', '3306')}/"
+    f"{int(os.environ.get('MYSQL_PORT', 3306))}/"
     f"{os.environ.get('MYSQL_DATABASE')}"
 )
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key')
