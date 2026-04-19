@@ -21,20 +21,19 @@ CORS(app)
 
 # ── MySQL Config ──────────────────────────────────────────────────────────────
 import os
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    f"mysql+mysqlconnector://{os.environ.get('MYSQL_USER')}:"
-    f"{os.environ.get('MYSQL_PASSWORD')}@"
-    f"{os.environ.get('MYSQL_HOST')}:"
-    f"{int(os.environ.get('MYSQL_PORT', 3306))}/"
-    f"{os.environ.get('MYSQL_DATABASE')}"
-)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'researchhub-secret-key-change-in-production'
-app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-db.init_app(app)
+# Railway provides DATABASE_URL automatically for MySQL
+database_url = os.environ.get('mysql://root:lrhbSJbnfSzjwbvgaGWUYoAtFDnBnkni@mysql.railway.internal:3306/railway')
+
+if database_url:
+    # Use Railway's direct URL
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Local fallback
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:root@localhost/researchhub'
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key')
 
 # ── Register Blueprints ───────────────────────────────────────────────────────
 app.register_blueprint(auth_bp,         url_prefix='/api/auth')
