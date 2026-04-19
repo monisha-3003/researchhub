@@ -2,7 +2,7 @@
    ResearchHub — Shared API & Auth helpers
    All pages import this file.
 ═══════════════════════════════════════════════ */
-const API = 'http://localhost:5000/api';
+const API = 'http://researchhub-production-637b.up.railway.app';
 
 /* ── Auth helpers ── */
 function saveUser(data) { localStorage.setItem('rh_user', JSON.stringify(data)); }
